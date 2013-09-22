@@ -72,13 +72,10 @@ def getFileType(content):
     return 7
 
 def initDbView(request):
-    
     foo = User.objects.all()
     if len(foo) == 0:
-        u1 = User(name="visti", role=0, valid_until="2013-12-31")
-        u2 = User(name="ingwe", role=0, valid_until="2013-12-31" )
+        u1 = User(name="forge", role=0, valid_until="2013-12-31")
         u1.save()
-        u2.save()
         f = FileSystem(name="ntfs", pythonpath="ntfsparser.ntfsc",pythoncreatecommand="NTFSCreateImage", 
                        fsclass = "NTFSC")
         f.save()
@@ -94,20 +91,17 @@ def initDbView(request):
         h.save()
         h = HidingMethod(name="Not hidden", priority = 3, pythonpath="hiding.donothide", pythonhideclass="DoNotHideFile")
         h.save()
-        c=Case(name="casetest", owner=User.objects.get(name="visti"), date_created="2013-06-01", 
+        c=Case(name="casetest", owner=User.objects.get(name="forge"), date_created="2013-06-01", 
                size="10M", amount=3, garbage=False,fsparam1=8, weekvariance=26, filesystem= FileSystem.objects.get(name="ntfs"),
                roottime=datetime.datetime(2010,7,16,3,42,42))
         c.save()
-        c.trivialstrategy_set.create(type=0, quantity=2,  exact = False, path="/holiday",
-                                     dirtime = datetime.datetime(2010,12,24,17,0,0))
-        c.trivialstrategy_set.create(type=1, quantity=2, exact = True, path="/doc",
-                                     dirtime = datetime.datetime(2011,2,28,9,30,15))
-        c.secretstrategy_set.create(method=h, group = 1)
-        c.save()
+        #c.trivialstrategy_set.create(type=0, quantity=2,  exact = False, path="/holiday",
+        #                             dirtime = datetime.datetime(2010,12,24,17,0,0))
+        #c.trivialstrategy_set.create(type=1, quantity=2, exact = True, path="/doc",
+        #                             dirtime = datetime.datetime(2011,2,28,9,30,15))
+        #c.secretstrategy_set.create(method=h, group = 1)
+        #c.save()
         
-       
-        
-    
     return HttpResponse("ok")
 
 def IndexView(request):
