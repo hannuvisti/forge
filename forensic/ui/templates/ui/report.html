@@ -1,0 +1,72 @@
+<!-- Copyright 2013 Hannu Visti 
+
+This file is part of ForGe forensic test image generator.
+ForGe is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with ForGe.  If not, see http://www.gnu.org/licenses/. -->
+
+<!DOCTYPE html>
+
+
+<html>
+<body>
+	{% load staticfiles %}
+	<link rel="stylesheet" type="text/css" href='{{ STATIC_URL }}ui/style.css' />
+
+	<center><H1>Result sheet</H1></center>
+	{% if case %}
+		<H2>Case {{ case.name }}</H2>
+		Root time: {{ case.roottime }}
+		<BR>
+		File system: {{ case.filesystem.name }}
+		<BR>
+	{% endif %}
+	<HR>
+	{% if timage %}
+		Sequence number: {{ timage.seqno }} / Filename: {{ timage.filename }}
+		<BR>
+		Time variance in weeks: {{ timage.weekvariance }}
+		<BR>
+	{% endif %}
+	<BR>
+	{% if trivial %}
+		<H2>Trivial items</H2>
+		{% for f in trivial %}
+			{{ f.path }}
+			<BR>
+		{% endfor %}
+	{% endif %}
+	<BR>
+	{% if secret %}
+		<H2>Hidden items</H2>
+		<table border="1">
+			<tr>
+				<th>File name</th>
+				<th>Method</th>
+				<th>Time</th>
+				<th>Location</th>
+			</tr>
+			
+			{% for f in secret %}
+				<tr>
+					<td>{{ f.file.name }}</td>
+					<td>{{ f.method.name }}</td>
+					<td>{{ f.filetime }}</td>
+					<td>{{ f.location }}</td>
+				</tr>
+			{% endfor %}
+		</table>
+	{% endif %}
+	
+	
+	
+
+
+
+</html>
+</body>
+

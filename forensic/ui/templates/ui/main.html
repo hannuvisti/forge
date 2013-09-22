@@ -1,0 +1,64 @@
+<!-- Copyright 2013 Hannu Visti 
+
+This file is part of ForGe forensic test image generator.
+ForGe is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with ForGe.  If not, see http://www.gnu.org/licenses/. -->
+
+<!DOCTYPE html>
+
+<html>
+<body>
+	{% load staticfiles %}
+	<link rel="stylesheet" type="text/css" href='{{ STATIC_URL }}ui/style.css' />
+
+	<div id="container" style="width:800px">
+		<div id="header" style="background-color:#FF3300;">
+			<h1 style="margin-bottom:0;"><center>ForGe - Forensic test image generator</center></h1>
+		</div>
+		<div id="mainmenu" style="background-color: #33FFaa;">
+			<ul class="nav">
+				<li><a href="/ui/main">Main </a></li>
+				<li><a href="/ui/files">Trivial files</a> </li> 
+				<li><a href="/ui/secretfiles">Secret files</a> </li>
+				<li><a href="/ui/images">Images</a></li>
+				<li><a href="/ui/solution">Solutions</a></li>
+			</ul>
+		</div>
+		
+		<div id="menu" style="background-color:#FFD700;height:500px;width:200px;float:left;">
+		{% block sidecontainer %}
+		
+			Choose from the top menu
+	
+		{% endblock %}
+		</div>
+
+		<div id="content" style="background-color:#EEEEEE;height:500px;width:600px;float:left;overflow-y: auto">
+		{% block maincontainer %}		
+			Trivial files: upload anything inconspicuous
+			<br>
+			Secret files: upload secret files - remember to assign them to categories
+			<br>
+			Images: create images from cases
+			<br>
+			Solutions: display image cheat sheets
+
+		{% endblock %}		
+		</div>
+	
+		{% block footer %}
+		<div id="footer" style="background-color:#FFA500;clear:both;text-align:center;">
+			Hannu Visti
+		</div>
+		{% endblock %}
+		
+	</div>
+
+</html>
+</body>
+

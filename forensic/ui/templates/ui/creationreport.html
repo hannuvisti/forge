@@ -1,0 +1,57 @@
+<!-- Copyright 2013 Hannu Visti 
+
+This file is part of ForGe forensic test image generator.
+ForGe is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with ForGe.  If not, see http://www.gnu.org/licenses/. -->
+
+<!DOCTYPE html>
+
+
+<html>
+<body>
+	{% load staticfiles %}
+	<link rel="stylesheet" type="text/css" href='{{ STATIC_URL }}ui/style.css' />
+
+	<center><H1>Creation result sheet</H1></center>
+	{% if case %}
+		<H2>Case {{ case.name }}</H2>
+		Number of copies: {{ case.amount }}
+		<BR>
+		File system: {{ case.filesystem.name }}
+		<BR>
+	{% endif %}
+	<HR>
+
+	{% if success %}
+		<H2>Successful images</H2>
+		{% for s in success %}
+			{{ s }}
+		{% endfor %}
+	{% endif %}
+	<BR>
+	{% if notsuccess %}
+		<H2>Unsuccessful images</H2>
+		<table border="1">
+			<tr>
+				<th>Image</th>
+				<th>Reason</th>
+			</tr>
+			
+			{% for ns in notsuccess %}
+				<tr>
+					<td>{{ ns.0 }}</td>
+					<td>{{ ns.1 }}</td>
+
+				</tr>
+			{% endfor %}
+		</table>
+	{% endif %}
+
+
+</body>
+</html>
