@@ -322,7 +322,7 @@ char *attach_file(char *prefix, char *command) {
     fprintf(stderr,"Mount point not empty\n");
     exit(1);
   }
-  path = malloc(sizeof(char)*(strlen(prefix)+strlen(command)));
+  path = malloc(sizeof(char)*(strlen(prefix)+strlen(command)+1));
   if (path == NULL) {
     perror(PNAME);
     exit(1);
