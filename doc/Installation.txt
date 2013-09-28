@@ -5,6 +5,12 @@ development web server. This document does not cover how to deploy
 the application to Apache or any other web server. Instructions how to 
 do this can be found in Django documentation. 
 
+The application has a default installation method using install.sh.
+This requires an application installation root directory and temporary
+mount point. Custom installation is possible, this document explains the
+modifications needed. See section 4 for custom installation.
+
+
 1. Requirements
 ForGe has been tested on 64 but Ubuntu 12.04 but other Linux variants
 are likely to work. The following applications are needed:
@@ -18,7 +24,13 @@ are likely to work. The following applications are needed:
 
 
 2. Required information
-The following directories and locations are needed:
+Default installation needs a mount point (default /mnt/image) 
+and installation directory (default /usr/local/forge). These can be
+modified in install.sh. It also requires an username of ForGe user,
+to chown directories to the correct user. 
+
+
+The following directories and locations are needed for advanced install:
 1) Mount point for temporary use to mount unfinished images.
     Default is /mnt/image. The directory must exist.
 2) Database type and location. SQLite is the easiest, the file
@@ -39,7 +51,34 @@ The following directories and locations are needed:
     installed anywhere. 
 
 
-3. Suggested installation process
+
+3. Default installation
+The recommended installation is done with install.sh. Edit the script to 
+modify APPDIR, MOUNTDIR and USERNAME.
+Run install.sh
+
+*** INSTALL.SH MUST BE RUN AS ROOT ***
+Follow instructions about setting up database and starting the web server.
+      Start web browser and navigate to 
+      http://localhost:8000/ui/init_db
+      if you get "ok", the application is ready to use. 
+
+Access the UI by either
+http://localhost:8000/ui/main  (application)
+http://localhost:8000/admin/ui (database administration)
+
+
+
+
+4. Custom installation
+*** NOT RECOMMENDED - use default installation instead***
+
+This section explains all locations of path information. 
+All files requiring modification need to be renamed manually if the custom 
+path is chosen. For example, chelper/chelper.h does not exist,
+chelper/chelper.h_ must be renamed to this file. 
+
+
 
 1) Create directories
 2) Edit chelper/chelper.h and define
