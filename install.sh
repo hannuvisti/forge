@@ -4,8 +4,6 @@ APPDIR=/usr/local/forge
 MOUNTDIR=/mnt/image
 USERNAME=visti
 
-rm -rf $APPDIR
-
 
 # Do not modify these below
 CHELPERDIR=$APPDIR/chelper
@@ -87,10 +85,10 @@ echo "creating chelper"
 cat $CHELPERDIR/chelper.h_ | sed s#@@IMAGEDIR@@#$IMAGEDIR# | sed s#@@MOUNTPOINT@@#$MOUNTDIR# > $CHELPERDIR/chelper.h
 cd $CHELPERDIR
 make && chmod 4711 chelper
-#rm Makefile
-#rm chelper.h
-#rm chelper.c
-#rm chelper.h_
+rm Makefile
+rm chelper.h
+rm chelper.c
+rm chelper.h_
 
 cd $APPDIR
 chown -R $USERNAME creator forensic Images repository
