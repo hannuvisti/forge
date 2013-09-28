@@ -61,7 +61,8 @@ The following directories and locations are needed:
     MOUNTPOINT to point to temporary mount point (2.1)
 8) edit creator/ntfsparser/ntfsc.py 
     change HELPER to point to chelper (2.5)
-
+8.5) edit forensic/forensic/wsgi.py and modify sys.path.append to
+     point to creator directory
 This completes code modifications. 
 The remaining task is to initialise and populate database. 
 

@@ -1,0 +1,393 @@
+'''
+Created on 22 May 2013
+
+@author: visti
+Copyright 2013 Hannu Visti
+
+This file is part of ForGe forensic test image generator.
+ForGe is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with ForGe.  If not, see <http://www.gnu.org/licenses/>.
+
+'''
+
+import struct
+from mftentry import _MftEntry 
+from tools import _hexdump
+from subprocess import call
+import sys
+from ui.uitools import ForensicError
+
+FLAG_SYSTEM = 0x1
+FLAG_DIRECTORY = 0x2
+FLAG_REGULAR = 0x4
+HELPER = "@@CHELPER@@"
+
+def NTFSCreateImage(name, size, garbage, clustersize=4):
+    #ntfs=NTFSC("/home/visti/Project/Images/image-ntfs")
+    #ntfs.fs_init()
+
+    #ntfs=NTFSC("/home/visti/Project/Images/image-ntfs", "/mnt/image")
+    if len(name) <= 8:
+        imagename = name
+    else:
+        imagename = name[:8]
+    
+    if garbage:
+        fill = "random"
+    else:
+        fill = "clean"
+         
+    result = call([HELPER, "create", "ntfs", str(size), str(clustersize), imagename, fill, name], shell=False)
+    return result
+
+
+
+class FileHandler(object):
+    gl_filename = ""
+    def __init__(self):
+        self.gl_filename = ""
+        
+    @staticmethod    
+    def SetFileName(name,handle):
+        FileHandler.gl_filename = name
+        FileHandler.gl_fh = handle
+    @staticmethod    
+    def GetFileName():
+        return FileHandler.gl_filename
+    
+    @staticmethod
+    def GetHandle():
+        return FileHandler.gl_fh
+
+class FileEntry(object):
+    def __init__(self, sid, name, flags, entry):
+        self.filenumber = sid
+        self.filename = name
+        self.flags = flags
+        self.link = entry
+    def displayRecord(self):
+        print self.filenumber, self.filename, self.flags, self.link
+    def get_flags(self):
+        return self.flags
+    def get_file_name(self):
+        return self.filename
+    def get_link(self):
+        return self.link
+    
+class FileSystemC(object):
+    def __init__(self, fname, mountpoint="/mnt/image"):
+        self.fs_sectorsize=0
+        self.fs_size=0
+        self.fs_fstype=""
+        self.fs_mountpoint = mountpoint
+        self.fs_fh = open(fname, "r")
+        self.fs_filename = fname
+        FileHandler.SetFileName(fname,self.fs_fh)
+        if len(self.fs_filename.rsplit('/',1)) == 1:
+            self.fs_shortname = self.fs_filename
+        else:
+            self.fs_shortname = self.fs_filename.rsplit('/',1)[1]
+        
+        
+class NTFSC(FileSystemC):
+    f_mft1 = 0
+    f_mft2 = 0
+    f_mftsize = 0       # 1024 in practice
+    f_clustersize = 0
+    f_indexbuffersize = 0
+    f_mft = []
+    
+    def __init__(self,fname, mountpoint):
+        self.f_mft = []
+        self.f_mftkey = {}
+        super(NTFSC, self).__init__(fname, mountpoint)
+        self.fs_fstype = "ntfs"
+        self.f_mounted = False
+        
+
+    def ntfs_vbr_init(self, vbr):
+        if vbr[3:7] != "NTFS":
+            print "unknown file type", vbr[3:7]
+            exit(1)
+        self.f_sectorsize=struct.unpack("<H", vbr[11:13])[0]
+        #self.f_fstype="ntfs"
+        self.f_clustersize = struct.unpack("B",vbr[13])[0]*self.f_sectorsize
+        
+        self.f_size=struct.unpack("<Q", vbr[40:48])[0]
+        self.f_mft1 = struct.unpack("<Q", vbr[48:56])[0]
+        self.f_mft2 = struct.unpack("<Q", vbr[56:64])[0]
+        tmp = struct.unpack("B",vbr[64])[0]
+        if tmp > 128:
+            self.f_mftsize = 2 ** abs(tmp-256)
+        else:
+            self.f_mftsize = tmp*self.f_clustersize
+        tmp = struct.unpack("B",vbr[68])[0]
+        if tmp > 128:
+            self.f_indexbuffersize = 2 ** abs(tmp-256)
+        else:
+            self.f_indexbuffersize= tmp*self.f_clustersize
+            
+
+        
+    def fs_display(self):
+        print "Sector size:", self.f_sectorsize
+        print "Cluster size:", self.f_clustersize
+        print "File system size:", self.f_size
+        print "MFT 1 location cluster:", self.f_mft1
+        print "MFT 2 location cluster:", self.f_mft2
+        print "MFT record size:", self.f_mftsize
+        print "Index buffer size:", self.f_indexbuffersize
+        print "------------------"
+        for i in self.f_mft:
+            if i.m_flags & 2:
+                i.mft_display()
+                print "EOR"
+    """ Build parent directories and a file list containing full path """
+    
+    def _dir_structure(self):
+        
+        self.f_slack = []
+        for m in self.f_mft:
+            s = m.get_slack()
+            if s and m.m_mftnumber > 16: 
+                """ flatten slack structure in case of multiple data streams """
+                for tmp_slack in s:
+                    self.f_slack.append(tmp_slack)
+                       
+            if m.m_flags & 3 == 3:
+
+                for d in m.m_dirTree:
+                    if d.flags & 2:
+                        continue                    
+                    self.f_mft[d.filerecord].set_parent_dir(d.parentdir)
+
+        recursive = [(5,"")]
+        while True:
+            try:
+     
+                item = recursive.pop()
+                path = item[1]
+                rdir = self.f_mft[item[0]]
+
+                for d in rdir.m_dirTree:
+                    if d.flags & 2:
+                        continue
+                    flags = 0
+                    if d.filerecord <= 16:
+                        flags |= FLAG_SYSTEM
+                    else:
+                        flags |= FLAG_REGULAR
+                    if self.f_mft[d.filerecord].m_flags & 3 == 3:
+                        flags |= FLAG_DIRECTORY
+                    
+                        
+                    self.fs_filelist[d.filerecord] = FileEntry(d.filerecord,path+"/"+d.filename, flags, self.f_mft[d.filerecord])
+
+                    if flags & FLAG_DIRECTORY and d.filerecord != 5 and not flags & FLAG_SYSTEM:
+                        recursive.append([d.filerecord,path+"/"+d.filename])
+
+            except IndexError:
+                break
+        
+
+         
+    def get_file_slack(self):
+        return self.f_slack if len (self.f_slack) > 0 else None
+            
+    def register_used_file_slack(self,location,used):
+        for s in self.f_slack:
+            if s[0] == location:
+                s[2] = used
+                
+        
+    def fs_init(self):
+        self.fs_fh.seek(0)
+        self.fs_filelist = {}
+        buf = self.fs_fh.read(512)
+        self.ntfs_vbr_init(buf)
+        self.fs_fh.seek(self.f_clustersize*self.f_mft1)
+        buf = self.fs_fh.read(self.f_mftsize)
+        mft = _MftEntry(buf,self,self.f_clustersize*self.f_mft1)
+        """ check this """
+        self.f_mft = []
+        self.f_mftkey = {} 
+
+        self.f_mft.append(mft)
+
+        pup = mft.mft_data(None, 1024, -1)
+
+        for i in range(0,len(pup),self.f_mftsize):
+            loc = mft.locate_data(None,i+1024)
+            mft_record = _MftEntry(pup[i:i+1024],self,loc)
+            self.f_mft.append(mft_record) 
+        #self.f_directory = DirectoryTree(self.f_mft)
+        self._dir_structure()
+
+
+    def get_list_of_files(self,flags):
+        result = []
+        for fkey in self.fs_filelist.keys():
+            #print >>sys.stderr, self.fs_filelist[fkey].get_file_name()
+            if self.fs_filelist[fkey].get_flags()  == flags:
+                result.append(self.fs_filelist[fkey])
+        return result
+            
+    def mount_image(self):
+        result = call([HELPER, "attach", "ntfs", self.fs_shortname], shell=False)
+        #print >>sys.stderr, "result:", result
+        if result == 0:
+            self.f_mounted = True
+        return result
+    def dismount_image(self):
+        #if not self.f_mounted:
+        #    return 0
+        result = call([HELPER, "detach"], shell=False)
+        if result == 0:
+            self.f_mounted = False
+        return result
+    def _return_dir_items_by_mft(self,mftnumber):
+        result = []
+        for f in self.f_mft:
+            #print >>sys.stderr, "uuu", f.get_file_name(), f.m_parentdir
+            if f.m_parentdir == mftnumber and f.m_mftnumber != 5:
+                result.append(f)
+        return result
+    
+    def find_file_by_path(self,name):
+        """ Non-deleted file """
+        for fkey in self.fs_filelist.keys():
+            if self.fs_filelist[fkey].get_file_name() == name:
+                return self.fs_filelist[fkey].get_link()
+        """ Deleted file """
+        """ Try to find the corresponding MFT record. 
+        pathlist returns "", first, second, etc
+        """
+        #print >>sys.stderr, "looking for:",name
+        try:
+            path,plainname = name.rsplit("/",1)
+            pathlist = path.split("/")
+            currdir = 5
+            for p in pathlist[1:]:
+                #print >>sys.stderr, "path:",p
+                dir_contents = self._return_dir_items_by_mft(currdir)
+                for i in dir_contents:
+                    #print >>sys.stderr, "   ",i.get_file_name()
+                    if i.get_file_name() == p:
+                        currdir = i.m_mftnumber
+                        break 
+            parent = currdir
+                
+        except ValueError:
+            parent = 5
+            plainname = name
+            #print >>sys.stderr, "File in root:", name
+        #print >>sys.stderr, "parent mft:", parent, plainname
+        finaldir = self._return_dir_items_by_mft(parent)
+        for f in finaldir:
+            #print >>sys.stderr,"qqq:",f.get_file_name()
+            if f.get_file_name() == plainname:
+                return f
+            
+        #for f in self.f_mft:
+        #    print >>sys.stderr,"*",f.get_file_name()
+        raise ForensicError("File not found FFBP")
+        
+        
+    def change_time(self,fname,btime):
+        try:
+            m = self.find_file_by_path(fname)
+            m.change_std_time(btime)
+            m.change_fname_time(btime)
+        except ForensicError:
+            print >>sys.stderr, fname
+            raise
+    def implement_action(self,act):
+        fname = act[0]
+        action = act[1]
+        try:
+            m = self.find_file_by_path(fname)
+            stdtime = m.query_std_time()
+        except ForensicError:
+            raise
+        result=""
+        try:
+            actiontime = action["Read"]
+            btime = dict(atime=actiontime)
+            m.change_std_time(btime)
+            result += "File read %s" % actiontime      
+        except KeyError:
+            pass
+        try:
+            actiontime = action["Rename"]
+            btime = {}
+            btime["ctime"] = stdtime.ctime
+            btime["atime"] = stdtime.atime
+            btime["etime"] = stdtime.etime
+            btime["mtime"] = stdtime.mtime
+            m.change_fname_time(btime)
+            btime = {}
+            btime["atime"] = actiontime
+            btime["etime"] = actiontime
+            m.change_std_time(btime)
+            result += "File renamed %s" % actiontime
+        except KeyError:
+            pass
+        try:
+            actiontime = action["Edit"]
+            btime = {}
+            btime["mtime"] = actiontime
+            btime["atime"] = actiontime
+            btime["etime"] = actiontime
+            m.change_std_time(btime)
+            result += "File edited %s" % actiontime
+        except KeyError:
+            pass
+        try:
+            actiontime = action["Copy"]
+            btime = {}
+            btime["ctime"] = actiontime
+            btime["atime"] = actiontime
+            btime["etime"] = actiontime            
+            m.change_std_time(btime)
+            result += "File copied to FS %s" % actiontime
+        except KeyError:
+            pass
+        try:
+            actiontime = action["Move"]
+            btime = {}           
+            btime["atime"] = actiontime           
+            m.change_std_time(btime)
+            result += "File moved to FS %s" % actiontime
+        except KeyError:
+            pass
+        return result
+    
+    def get_directory_structure(self):
+        for mftEntry in self.f_mft:
+            if mftEntry.m_flags & 3:
+                mftEntry.getDirectoryStructure()
+    
+    def write_location(self,position,data):
+        try:
+            fh = open(self.fs_filename, "r+b")
+            fh.seek(position)
+            fh.write(data)
+            fh.close()
+        except IOError:
+            raise ForensicError("Cannot write to image")
+    
+            
+    def fs_finalise(self):
+        pass
+        try:
+            rmft = self.f_mft[0].mft_data(None,1024*5,1024)
+            wloc = self.f_clustersize * self.f_mft2 + 1024*5
+            self.write_location(wloc, rmft)
+        except ForensicError:
+            raise ForensicError("Unable to fix $MftMirr")
+            

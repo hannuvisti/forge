@@ -322,7 +322,7 @@ char *attach_file(char *prefix, char *command) {
     fprintf(stderr,"Mount point not empty\n");
     exit(1);
   }
-  path = malloc(sizeof(char)*(strlen(prefix)+strlen(command)));
+  path = malloc(sizeof(char)*(strlen(prefix)+strlen(command)+1));
   if (path == NULL) {
     perror(PNAME);
     exit(1);
@@ -450,7 +450,7 @@ int create_ntfs_filesystem(char *prefix, char *filename, char *partname, int clu
     fprintf(stderr, "partition name unset\n");
     exit(1);
   }
-  path = malloc(sizeof(char)*(strlen(prefix)+strlen(filename)));
+  path = malloc(sizeof(char)*(strlen(prefix)+strlen(filename)+1));
   if (path == NULL) {
     perror(PNAME);
     exit(1);
@@ -506,7 +506,7 @@ void create_file(char *prefix, char *filename, long size, int contents) {
     exit(1);
   }
 
-  path = malloc(sizeof(char)*(strlen(prefix)+strlen(filename)));
+  path = malloc(sizeof(char)*(strlen(prefix)+strlen(filename)+1));
   if (path == NULL) {
     perror(PNAME);
     exit(1);
@@ -562,7 +562,7 @@ main (int argc, char **argv) {
     fprintf(stderr, "too long PATH\n");
     exit(1);
   }
-  prefix = malloc(sizeof(char)*strlen(PATH));
+  prefix = malloc(sizeof(char)*strlen(PATH)+1);
   if (prefix == NULL) {
     perror(PNAME);
     exit(1);
@@ -577,7 +577,7 @@ main (int argc, char **argv) {
     fprintf(stderr, "too long MOUNTPOINT\n");
     exit(1);
   }
-  mountpoint = malloc(sizeof(char)*strlen(MOUNTPOINT));
+  mountpoint = malloc(sizeof(char)*strlen(MOUNTPOINT)+1);
   if (mountpoint == NULL) {
     perror(PNAME);
     exit(1);
@@ -608,7 +608,7 @@ main (int argc, char **argv) {
       fprintf(stderr, "Too long parameter %s\n", argv[7]);
       exit(1);
     }
-    param = malloc(sizeof(char)*strlen(argv[7]));
+    param = malloc(sizeof(char)*strlen(argv[7])+1);
     if (param == NULL) {
       perror(PNAME);
       exit(1);
@@ -658,7 +658,7 @@ main (int argc, char **argv) {
       fprintf(stderr, "Too long parameter %s\n", argv[3]);
       exit(1);
     }
-    param = malloc(sizeof(char)*strlen(argv[3]));
+    param = malloc(sizeof(char)*strlen(argv[3])+1);
     if (param == NULL) {
       perror(PNAME);
       exit(1);
