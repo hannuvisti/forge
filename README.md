@@ -1,6 +1,5 @@
-
 ForGe
-Forensic test image generator
+Forensic test image generator v1.1
 Copyright Hannu Visti 2013, licenced under Gnu General Public Licence
 
 1. Purpose of the application
@@ -30,7 +29,7 @@ Tuxera NTFS-3G 2013.1.13  (the default in Ubuntu 12.04 is an older version, whic
 Other Linux versions are likely to work as well but they have not been tested.
 
 3. Installation instructions
-See file INSTALLATION
+See file Doc/Installation.txt
 
 4. Stuff
 The tool was and still is an academic project. It is not designed to be a ready product but a prototype. The 
