@@ -61,21 +61,22 @@ The following directories and locations are needed:
     MOUNTPOINT to point to temporary mount point (2.1)
 8) edit creator/ntfsparser/ntfsc.py 
     change HELPER to point to chelper (2.5)
-8.5) edit forensic/forensic/wsgi.py and modify sys.path.append to
-     point to creator directory
+9) edit forensic/forensic/wsgi.py
+    change sys.path.append to point to creator directory
+
 This completes code modifications. 
 The remaining task is to initialise and populate database. 
 
-9) Create an empty database
+10) Create an empty database
     cd forensic
     python manage.py syncdb
     
     syncdb asks questions about administrator and password,
     enter anything you want
-10) Start Django development web server
+11) Start Django development web server
       python manage.py runserver
 
-11) Use included view to populate database with initial entries
+12) Use included view to populate database with initial entries
       Start web browser and navigate to 
       http://localhost:8000/ui/init_db
       if you get "ok", the application is ready to use. 
