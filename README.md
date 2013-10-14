@@ -1,4 +1,4 @@
-# ForGE
+# ForGe
 
 Forensic test image generator v1.1
 <br>
