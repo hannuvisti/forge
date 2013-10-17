@@ -84,6 +84,7 @@ class DirEntry(object):
         self.d_filesize, = struct.unpack("<I", se[28:32])
         self.d_location = loc+block[1]
         self.d_parentdir = parentdir
+        self.d_clusterchain = []
 
         lname = ""
         if len(block[0]) > 1:
@@ -105,9 +106,19 @@ class DirEntry(object):
         print "Entry loc:", self.d_location
         print "Flags:", self.d_flags
         if self.d_cluster > 0:
-            print "Cluster:", self.parent.f_fat.get_cluster_chain(self.d_cluster)
+            print "Cluster:", self.parent.f_fat.get_cluster_chain(self.d_cluster)[0]
+            pass
         print "Size:", self.d_filesize
         print "-----"
+
+    def read_file(self):
+        if len(self.d_clusterchain) > 0:
+            buf = ""
+            for i in self.d_clusterchain:
+                buf += self.parent.read_cluster(i)
+            return buf
+        else:
+            return None
 
 class FatTable(object):
     def __init__(self,buf,loc,par):
@@ -164,7 +175,7 @@ class FATC(FileSystemC):
         self.f_mounted = False
         self.f_filelist = []
 
-
+        
     def fat_vbr_init(self, vbr):
         self.f_sectorsize, = struct.unpack("<H", vbr[11:13])
         self.f_clustersize = self.f_sectorsize * struct.unpack("B",vbr[13])[0]
@@ -180,7 +191,10 @@ class FATC(FileSystemC):
         self.f_rootstart = self.f_reserved + self.f_numberoffats*self.f_fatsize
         self.f_datastart = self.f_rootstart + (self.f_rootentries*32)/self.f_sectorsize
         
-
+    """ returns cluster location in sectors """
+    def locate_cluster(self, cl):
+        location = self.f_datastart + (cl-2) * self.f_clustersize
+        return location
 
     def print_vbr(self):
         print "FS type: ", self.fs_fstype
@@ -216,7 +230,7 @@ class FATC(FileSystemC):
         self.fs_fh.seek(0)
         buf = self.fs_fh.read(512)
         self.fat_vbr_init(buf)
-        #self.print_vbr()
+        self.print_vbr()
 
         self.fs_fh.seek(self.f_sectorsize*self.f_reserved)
         buf = self.fs_fh.read(self.f_fatsize*self.f_sectorsize)
@@ -230,16 +244,31 @@ class FATC(FileSystemC):
         dirent = self._process_dir(rootdir)
         for f in dirent:
             d = DirEntry(self,f, None, self.f_sectorsize*self.f_rootstart)
+            if d.d_cluster > 0:
+                d.d_clusterchain = self.f_fat.get_cluster_chain(d.d_cluster)
             d.print_entry()
             if d.d_flags & FLAG_DIR and d.d_cluster > 0 and d.d_exists:
                 dir_stack.append(d)
         
-        """        try:
-            while True:
+        while True:
+            try:
                 nd = dir_stack.pop()
-                buf = self.read_cluster(nd.d_cluster)
+                buf = nd.read_file()
                 dirent = self._process_dir(buf)
-        """
+                print "entering dir", nd.d_filename
+                for f in dirent:
+                    d = DirEntry(self,f,nd,self.locate_cluster(nd.d_cluster))
+                    if d.d_cluster > 0:
+                        d.d_clusterchain = self.f_fat.get_cluster_chain(d.d_cluster)
+                    d.print_entry()
+                    if d.d_flags & FLAG_DIR and d.d_cluster > 0 and d.d_exists:
+                        if d.d_filename == ".       " or d.d_filename == "..      ":
+                            pass
+                        else:
+                            dir_stack.append(d)
+
+            except IndexError:
+                break
     def mount_image(self):
         result = call([HELPER, "attach", self.fs_fstype, self.fs_shortname], shell=False)
         if result == 0:
@@ -250,9 +279,9 @@ class FATC(FileSystemC):
         if result == 0:
             self.f_mounted = False
         return result
-
     def read_cluster(self, cluster):
-        self.fs_fh.seek((self.f_datastart+(cluster*self.f_clustersize)) * self.f_sectorsize)
+        position = self.f_datastart*self.f_sectorsize + (cluster-2)*self.f_clustersize
+        self.fs_fh.seek(position)
         buf = self.fs_fh.read(self.f_clustersize*self.f_sectorsize)
         return buf
 
