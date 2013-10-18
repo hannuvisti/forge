@@ -42,6 +42,24 @@ FLAG_HIDDEN = 0x2
 FLAG_SYSTEM = 0x4
 FLAG_DIR = 0x16
 
+
+""" ForGe uses NTFS flags - 0x1 = system, 0x2 = directory, 0x4 = regular 
+    this class converts from FAT to NTFS flags """
+
+class FlagConverter(object):
+    @staticmethod
+    def convert_to_ntfs(flag):
+        i = 0;
+        if flag & FLAG_DIR:
+            i |= 0x2
+        if flag & FLAG_SYSTEM:
+            i |= 0x1
+        else:
+            i |= 0x4
+        return i
+
+
+
 sys.path.append("/usr/local/forge/creator")
 
 class FileHandler(object):
@@ -78,6 +96,7 @@ class DirEntry(object):
             self.d_exists = True
         self.d_filename = se[0:8]
         self.d_extension = se[8:11]
+        self.d_unixname = self._unmangle_name(self.d_filename,self.d_extension)
         self.d_flags, = struct.unpack("B",se[11])
         self.d_time = FATTime(self,se[22:26])
         self.d_cluster, = struct.unpack("<H",se[26:28])
@@ -85,6 +104,12 @@ class DirEntry(object):
         self.d_location = loc+block[1]
         self.d_parentdir = parentdir
         self.d_clusterchain = []
+        self.d_slack = None
+        self.d_ntfsflags = FlagConverter.convert_to_ntfs(self.d_flags)
+        if parentdir:
+            self.d_path = self.d_parentdir.d_path + "/" + self.d_unixname
+        else:
+            self.d_path = "/"+self.d_unixname
 
         lname = ""
         if len(block[0]) > 1:
@@ -110,6 +135,24 @@ class DirEntry(object):
             pass
         print "Size:", self.d_filesize
         print "-----"
+    def _unmangle_name(self, n, e):
+        result = ""
+        for c in n:
+            if c == " ":
+                continue
+            result += c
+
+        extresult = ""
+        for c in e:
+            if c == " ":
+                continue
+            extresult += c
+        
+        if extresult == "":
+            name = result
+        else:
+            name = result+"."+extresult
+        return name
 
     def read_file(self):
         if len(self.d_clusterchain) > 0:
@@ -190,6 +233,8 @@ class FATC(FileSystemC):
         self.f_fatsize = _small_fat if _small_fat > 0 else _large_fat
         self.f_rootstart = self.f_reserved + self.f_numberoffats*self.f_fatsize
         self.f_datastart = self.f_rootstart + (self.f_rootentries*32)/self.f_sectorsize
+        self.f_slack = []
+        self.f_filelist = []
         
     """ returns cluster location in sectors """
     def locate_cluster(self, cl):
@@ -246,29 +291,69 @@ class FATC(FileSystemC):
             d = DirEntry(self,f, None, self.f_sectorsize*self.f_rootstart)
             if d.d_cluster > 0:
                 d.d_clusterchain = self.f_fat.get_cluster_chain(d.d_cluster)
-            d.print_entry()
+                if not d.d_flags & FLAG_DIR:
+                    last_cluster = d.d_clusterchain[-1]
+                    remainder = d.d_filesize % self.f_clustersize
+                    slackamount = (remainder / self.f_sectorsize) * self.f_sectorsize
+                    slackstart = self.locate_cluster(last_cluster) + self.f_clustersize - slackamount
+                    if slackamount > 0:
+                        d.d_slack = [slackstart, slackamount, 0]
+                        self.f_slack.append([slackstart, slackamount, 0])
+
             if d.d_flags & FLAG_DIR and d.d_cluster > 0 and d.d_exists:
                 dir_stack.append(d)
+            if not d.d_flags & FLAG_DIR:
+                self.f_filelist.append(d)
         
         while True:
             try:
                 nd = dir_stack.pop()
                 buf = nd.read_file()
                 dirent = self._process_dir(buf)
-                print "entering dir", nd.d_filename
                 for f in dirent:
                     d = DirEntry(self,f,nd,self.locate_cluster(nd.d_cluster))
                     if d.d_cluster > 0:
                         d.d_clusterchain = self.f_fat.get_cluster_chain(d.d_cluster)
-                    d.print_entry()
+                        if not d.d_flags & FLAG_DIR:
+                            last_cluster = d.d_clusterchain[-1]
+                            remainder = d.d_filesize % self.f_clustersize
+                            slackamount = (remainder / self.f_sectorsize) * self.f_sectorsize
+                            slackstart = self.locate_cluster(last_cluster) + self.f_clustersize - slackamount
+                            if slackamount > 0:
+                                d.d_slack = [slackstart, slackamount, 0]
+                                self.f_slack.append([slackstart, slackamount, 0])
+
                     if d.d_flags & FLAG_DIR and d.d_cluster > 0 and d.d_exists:
                         if d.d_filename == ".       " or d.d_filename == "..      ":
                             pass
                         else:
                             dir_stack.append(d)
+                    if not d.d_flags & FLAG_DIR:
+                        self.f_filelist.append(d)
+
 
             except IndexError:
                 break
+
+    def read_cluster(self, cluster):
+        position = self.f_datastart*self.f_sectorsize + (cluster-2)*self.f_clustersize
+        self.fs_fh.seek(position)
+        buf = self.fs_fh.read(self.f_clustersize*self.f_sectorsize)
+        return buf
+
+    def locate_cluster(self, cluster):
+        position = self.f_datastart * self.f_sectorsize + (cluster -2)*self.f_clustersize
+        return position
+
+    """ Interface methods """
+    def get_file_slack(self):
+        return self.f_slack if len (self.f_slack) > 0 else None
+
+    def register_used_file_slack(self, location, used):
+        for s in self.f_slack:
+            if s[0] == location:
+                s[2] = used
+
     def mount_image(self):
         result = call([HELPER, "attach", self.fs_fstype, self.fs_shortname], shell=False)
         if result == 0:
@@ -279,11 +364,13 @@ class FATC(FileSystemC):
         if result == 0:
             self.f_mounted = False
         return result
-    def read_cluster(self, cluster):
-        position = self.f_datastart*self.f_sectorsize + (cluster-2)*self.f_clustersize
-        self.fs_fh.seek(position)
-        buf = self.fs_fh.read(self.f_clustersize*self.f_sectorsize)
-        return buf
+
+    def get_list_of_files(self,flags):
+        result = []
+        for n in self.f_filelist:
+            if n.d_ntfsflags == flags:
+                result.append(n)
+        
 
 
 
