@@ -2,6 +2,7 @@
 import struct
 import sys
 import binascii
+import datetime
 
 from subprocess import call
 
@@ -81,9 +82,59 @@ class FileHandler(object):
 
 
 class FATTime(object):
-    def __init__(self,p,data):
+    def __init__(self,p,data1,data2):
         self.parent = p
-        self.t_data = data
+        self.t_data1 = data1
+        self.t_data2 = data2
+
+        """ ctime """
+        c = 256*ord(data1[2]) + ord(data1[1])
+        d = 256*ord(data1[4]) + ord(data1[3])
+
+        t_day = d & 31
+        t_month = (d & 480) >> 5
+        t_year = ((d & 65024) >> 9) + 1980
+
+        t_sec = (c & 31) * 2
+        t_min = (c & 2016) >> 5
+        t_hour = (c & 63488) >> 11
+        if t_day > 0 and t_month > 0:
+            self.ctime = datetime.datetime(t_year, t_month, t_day, t_hour, t_min, t_sec)
+        else: 
+            self.ctime = None
+
+        """ mtime """
+        c = 256*ord(data2[1]) + ord(data2[0])
+        d = 256*ord(data2[3]) + ord(data2[2])
+        t_day = d & 31
+        t_month = (d & 480) >> 5
+        t_year = ((d & 65024) >> 9) + 1980
+
+        t_sec = (c & 31) * 2
+        t_min = (c & 2016) >> 5
+        t_hour = (c & 63488) >> 11
+        if t_day > 0 and t_month > 0:
+            self.mtime = datetime.datetime(t_year, t_month, t_day, t_hour, t_min, t_sec)
+        else: 
+            self.mtime = None
+        
+        """ atime """
+
+        d = 256*ord(data1[6]) + ord(data1[5])
+        t_day = d & 31
+        t_month = (d & 480) >> 5
+        t_year = ((d & 65024) >> 9) + 1980
+
+        if t_day > 0 and t_month > 0:
+            self.atime = datetime.datetime(t_year, t_month, t_day)
+        else: 
+            self.atime = None
+        
+        
+    def print_time(self):
+        print self.ctime
+        print self.mtime
+        print self.atime
 
 class DirEntry(object):
     def __init__(self, parent, block,parentdir,loc):
@@ -98,7 +149,7 @@ class DirEntry(object):
         self.d_extension = se[8:11]
         self.d_unixname = self._unmangle_name(self.d_filename,self.d_extension)
         self.d_flags, = struct.unpack("B",se[11])
-        self.d_time = FATTime(self,se[22:26])
+        self.d_time = FATTime(self,se[13:20],se[22:26])
         self.d_cluster, = struct.unpack("<H",se[26:28])
         self.d_filesize, = struct.unpack("<I", se[28:32])
         self.d_location = loc+block[1]
@@ -124,6 +175,7 @@ class DirEntry(object):
                 self.d_longname = "This should not happen"
         else:
             self.d_longname = ""
+
 
     def print_entry(self):
         print "Filename:", self.d_filename,".",self.d_extension
