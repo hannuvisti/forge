@@ -129,7 +129,41 @@ class FATTime(object):
             self.atime = datetime.datetime(t_year, t_month, t_day)
         else: 
             self.atime = None
+
+    def __modify_binary_data(self):
+        if self.ctime != None:
+            d = ((self.ctime.year - 1980) << 9) | (self.ctime.month << 5) | self.ctime.day
+            c = (self.ctime.hour << 11) | (self.ctime.month << 5) | self.ctime.day
+            q = struct.pack(">H",c)
+            r = struct.pack(">H",d)
+            self.data1 = self.data1[0]+q[0]+q[1]+r[0]+r[1]+self.data[5]+self.data[6]
+        if self.atime != None:
+            d = ((self.atime.year - 1980) << 9) | (self.atime.month << 5) | self.atime.day
+            q = struct.pack(">h",d)
+            self.data1 = self.data1[0:6] + q[0] + q[1]
+        if self.mtime != None:
+            d = ((self.mtime.year - 1980) << 9) | (self.mtime.month << 5) | self.mtime.day
+            c = (self.mtime.hour << 11) | (self.mtime.month << 5) | self.mtime.day
+            q = struct.pack(">H",c)
+            r = struct.pack(">H",d)
+            self.data2 = q[0]+q[1]+r[0]+r[1]
+            
+
         
+    def change_atime(self,newtime):
+        self.atime = newtime
+        self.__modify_binrary_data()
+    def change_mtime:
+        self.mtime = newtime
+        self.__modify_binrary_data()
+    def change_ctime:
+        self.ctime = newtime
+        self.__modify_binrary_data()
+    def change_all_times(self,newtime):
+        self.change_atime(newtime)
+        self.mhange_atime(newtime)
+        self.change_atime(newtime)
+
         
     def print_time(self):
         print self.ctime
