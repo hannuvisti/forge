@@ -5,6 +5,7 @@ import binascii
 import datetime
 
 from subprocess import call
+from ui.uitools import ForensicError
 
 def _Split_String(s):
     __i=0
@@ -129,9 +130,46 @@ class FATTime(object):
             self.atime = datetime.datetime(t_year, t_month, t_day)
         else: 
             self.atime = None
+
+    def _modify_binary_data(self):
+
+        if self.ctime != None:
+            d = ((self.ctime.year - 1980) << 9) | (self.ctime.month << 5) | self.ctime.day
+            c = (self.ctime.hour << 11) | (self.ctime.minute << 5) | (self.ctime.second/2)
+            q = struct.pack("<H",c)
+            r = struct.pack("<H",d)
+            self.t_data1 = self.t_data1[0]+q[0]+q[1]+r[0]+r[1]+self.t_data1[5]+self.t_data1[6]
+
+        if self.atime != None:
+            d = ((self.atime.year - 1980) << 9) | (self.atime.month << 5) | self.atime.day
+            q = struct.pack("<H",d)
+            self.t_data1 = self.t_data1[0:5] + q[0] + q[1]
         
+        if self.mtime != None:
+            d = ((self.mtime.year - 1980) << 9) | (self.mtime.month << 5) | self.mtime.day
+            c = (self.mtime.hour << 11) | (self.mtime.minute << 5) | (self.mtime.second/2)
+            q = struct.pack("<H",c)
+            r = struct.pack("<H",d)
+            self.t_data2 = q[0]+q[1]+r[0]+r[1]
+            
+
         
-    def print_time(self):
+    def change_atime(self,newtime):
+        self.atime = newtime
+        self._modify_binary_data()
+    def change_mtime(self,newtime):
+        self.mtime = newtime
+        self._modify_binary_data()
+    def change_ctime(self,newtime):
+        self.ctime = newtime
+        self._modify_binary_data()
+    def change_all_times(self,newtime):
+        self.change_atime(newtime)
+        self.change_mtime(newtime)
+        self.change_ctime(newtime)
+
+        
+    def print_entry(self):
         print self.ctime
         print self.mtime
         print self.atime
@@ -179,13 +217,16 @@ class DirEntry(object):
 
     def print_entry(self):
         print "Filename:", self.d_filename,".",self.d_extension
-        print "Long name:", self.d_longname
+        print "Long name:", "X"+self.d_longname+"x"
+        print "Unix name:", "X"+self.d_unixname+"x"
         print "Entry loc:", self.d_location
         print "Flags:", self.d_flags
+        print "Start cluster:", self.d_cluster
         if self.d_cluster > 0:
             print "Cluster:", self.parent.f_fat.get_cluster_chain(self.d_cluster)[0]
             pass
         print "Size:", self.d_filesize
+        self.d_time.print_entry()
         print "-----"
     def _unmangle_name(self, n, e):
         result = ""
@@ -214,6 +255,22 @@ class DirEntry(object):
             return buf
         else:
             return None
+    def write_timestamps(self):
+        self.parent.write_data(self.d_location+13,self.d_time.t_data1)
+        self.parent.write_data(self.d_location+22,self.d_time.t_data2)
+
+    def change_all_times(self, times):
+        self.d_time.change_all_times(times)
+        self.write_timestamps()
+    def change_atime(self,times):
+        self.d_time.change_atime(times)
+        self.write_timestamps()
+    def change_ctime(self,times):
+        self.d_time.change_ctime(times)
+        self.write_timestamps()
+    def change_mtime(self,times):
+        self.d_time.change_mtime(times)
+        self.write_timestamps()
 
 class FatTable(object):
     def __init__(self,buf,loc,par):
@@ -390,13 +447,24 @@ class FATC(FileSystemC):
     def read_cluster(self, cluster):
         position = self.f_datastart*self.f_sectorsize + (cluster-2)*self.f_clustersize
         self.fs_fh.seek(position)
-        buf = self.fs_fh.read(self.f_clustersize*self.f_sectorsize)
+        buf = self.fs_fh.read(self.f_clustersize)
         return buf
 
     def locate_cluster(self, cluster):
         position = self.f_datastart * self.f_sectorsize + (cluster -2)*self.f_clustersize
         return position
 
+    def write_data(self, position, data):
+        try:
+            wh = open(self.fs_filename,"r+b");
+            wh.seek(position)
+            wh.write(data)
+            wh.close()
+        except IOError:
+            raise ForensicError("Cannot write to image")
+
+
+            
     """ Interface methods """
     def get_file_slack(self):
         return self.f_slack if len (self.f_slack) > 0 else None
@@ -428,7 +496,15 @@ class FATC(FileSystemC):
 
 # Foo
 
-fs = FATC("/usr/local/forge/Images/pup", "/mnt/image")
+fs = FATC("/Users/visti/Forge/testfat", "/mnt/image")
 fs.fs_init()
+
+nt = datetime.datetime (1999,10,11,13,42,42)
+
+for f in fs.f_filelist:
+    if f.d_unixname == "SHLARGE.GIF":
+        f.print_entry()
+        f.change_all_times(nt)
+        f.print_entry()
 
 
