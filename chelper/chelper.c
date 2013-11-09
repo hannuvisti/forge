@@ -311,7 +311,7 @@ int mount_fat_filesystem(char *device) {
     fprintf(stderr,"Mount point not empty\n");
     return (-1);
   }
-  char *arg[] = {MOUNT_FAT, "-t", "msdos", device, MOUNTPOINT, NULL};
+  char *arg[] = {MOUNT_FAT, "-t", "vfat", "-o", "umask=000", device, MOUNTPOINT, NULL};
   
   pid = fork();
   if (pid == -1) {
