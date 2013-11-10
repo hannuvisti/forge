@@ -6,6 +6,7 @@ import datetime
 
 from subprocess import call
 from ui.uitools import ForensicError
+from ntfsparser.ntfsc import FileEntry
 
 def _Split_String(s):
     __i=0
@@ -43,6 +44,36 @@ HELPER = "/usr/local/forge/chelper/chelper"
 FLAG_HIDDEN = 0x2
 FLAG_SYSTEM = 0x4
 FLAG_DIR = 0x16
+
+
+
+
+
+def FAT16CreateImage(name,size,parameters={}):
+    clustersize=4
+    try:
+        clustersize = parameters['clustersize']
+    except KeyError:
+        pass
+    garbage=False
+
+    try:
+        garbage = parameters['garbage']
+    except KeyError:
+        pass
+
+    if len(name) <= 8:
+        imagename = name
+    else:
+        imagename = name[:8]
+        
+    if garbage:
+        fill = "random"
+    else:
+        fill = "clean"
+
+    result = call([HELPER,"create","FAT16",str(size),str(clustersize),imagename,fill,name], shell=False)
+    return result
 
 
 """ ForGe uses NTFS flags - 0x1 = system, 0x2 = directory, 0x4 = regular 
@@ -195,10 +226,6 @@ class DirEntry(object):
         self.d_clusterchain = []
         self.d_slack = None
         self.d_ntfsflags = FlagConverter.convert_to_ntfs(self.d_flags)
-        if parentdir:
-            self.d_path = self.d_parentdir.d_path + "/" + self.d_unixname
-        else:
-            self.d_path = "/"+self.d_unixname
 
         lname = ""
         if len(block[0]) > 1:
@@ -208,11 +235,20 @@ class DirEntry(object):
                 lname = lname + e[1:11] + e[14:26] + e[28:32]
             p = lname.find("\x00\x00")
             if p != 0:
-                self.d_longname = lname[0:p]
+                #self.d_longname = unicode(lname[0:p],errors="ignore",encoding="utf-16-le")
+                self.d_longname = lname[0:p].decode("utf-16-le")
             else:
                 self.d_longname = "This should not happen"
         else:
-            self.d_longname = ""
+            #self.d_longname = unicode(self.d_unixname,errors="ignore",encoding="utf-16-le")
+            self.d_longname = unicode(self.d_unixname,errors="ignore")
+
+        if parentdir:
+            self.d_path = self.d_parentdir.d_path + "/" + self.d_unixname
+            self.d_longpath = self.d_parentdir.d_longpath + unicode("/",errors="strict") + self.d_longname
+        else:
+            self.d_path = '/'+self.d_unixname
+            self.d_longpath = unicode('/',errors="strict")+self.d_longname
 
 
     def print_entry(self):
@@ -226,6 +262,7 @@ class DirEntry(object):
             print "Cluster:", self.parent.f_fat.get_cluster_chain(self.d_cluster)[0]
             pass
         print "Size:", self.d_filesize
+        print "Path:", self.d_longpath
         self.d_time.print_entry()
         print "-----"
     def _unmangle_name(self, n, e):
@@ -256,8 +293,8 @@ class DirEntry(object):
         else:
             return None
     def write_timestamps(self):
-        self.parent.write_data(self.d_location+13,self.d_time.t_data1)
-        self.parent.write_data(self.d_location+22,self.d_time.t_data2)
+        self.parent.write_location(self.d_location+13,self.d_time.t_data1)
+        self.parent.write_location(self.d_location+22,self.d_time.t_data2)
 
     def change_all_times(self, times):
         self.d_time.change_all_times(times)
@@ -344,6 +381,7 @@ class FATC(FileSystemC):
         self.f_datastart = self.f_rootstart + (self.f_rootentries*32)/self.f_sectorsize
         self.f_slack = []
         self.f_filelist = []
+        self.f_entrylist = []
         
     """ returns cluster location in sectors """
     def locate_cluster(self, cl):
@@ -411,8 +449,7 @@ class FATC(FileSystemC):
 
             if d.d_flags & FLAG_DIR and d.d_cluster > 0 and d.d_exists:
                 dir_stack.append(d)
-            if not d.d_flags & FLAG_DIR:
-                self.f_filelist.append(d)
+            self.f_filelist.append(d)
         
         while True:
             try:
@@ -437,12 +474,16 @@ class FATC(FileSystemC):
                             pass
                         else:
                             dir_stack.append(d)
-                    if not d.d_flags & FLAG_DIR:
-                        self.f_filelist.append(d)
+                    self.f_filelist.append(d)
 
 
             except IndexError:
                 break
+        i=0
+        for q in self.f_filelist:
+            fe = FileEntry(i,q.d_path,q.d_ntfsflags,q)
+            i += 1
+            self.f_entrylist.append(fe)
 
     def read_cluster(self, cluster):
         position = self.f_datastart*self.f_sectorsize + (cluster-2)*self.f_clustersize
@@ -454,7 +495,11 @@ class FATC(FileSystemC):
         position = self.f_datastart * self.f_sectorsize + (cluster -2)*self.f_clustersize
         return position
 
-    def write_data(self, position, data):
+
+
+            
+    """ Interface methods """
+    def write_location(self, position, data):
         try:
             wh = open(self.fs_filename,"r+b");
             wh.seek(position)
@@ -463,9 +508,6 @@ class FATC(FileSystemC):
         except IOError:
             raise ForensicError("Cannot write to image")
 
-
-            
-    """ Interface methods """
     def get_file_slack(self):
         return self.f_slack if len (self.f_slack) > 0 else None
 
@@ -487,24 +529,79 @@ class FATC(FileSystemC):
 
     def get_list_of_files(self,flags):
         result = []
-        for n in self.f_filelist:
-            if n.d_ntfsflags == flags:
+        for n in self.f_entrylist:
+            if n.get_flags() == flags:
                 result.append(n)
         
+        return result
+
+    def find_file_by_path(self,path):
+        for f in self.f_entrylist:
+            s = f.get_file_name()
+            if s == path:
+                return f
+        raise ForensicError("File not found FFBP")
+
+    def change_time(self,fname,btime):
+        atime=ctime=mtime=None
+        try:
+            atime=ctime=mtime=btime["all"]
+        except KeyError:
+            pass
+
+        try:
+            atime=btime["atime"]
+        except KeyError:
+            pass
+        try:
+            ctime=btime["ctime"]
+        except KeyError:
+            pass
+        try:
+            mtime=btime["mtime"]
+        except KeyError:
+            pass
+
+        try:
+            m = self.find_file_by_path(fname).link
+            if atime:
+                m.change_atime(atime)
+            if mtime:
+                m.change_mtime(mtime)
+            if ctime:
+                change_ctime(ctime)
+        except ForensicError:
+            raise
+
+    def implement_action(self,act):
+        pass
 
 
 
 # Foo
 
-fs = FATC("/Users/visti/Forge/testfat", "/mnt/image")
+fs = FATC("/usr/local/forge/Images/pup", "/mnt/image")
 fs.fs_init()
 
 nt = datetime.datetime (1999,10,11,13,42,42)
 
-for f in fs.f_filelist:
-    if f.d_unixname == "SHLARGE.GIF":
-        f.print_entry()
-        f.change_all_times(nt)
-        f.print_entry()
+for f in fs.get_list_of_files(4):
+    if f.filenumber == 90:
+        f.link.print_entry()
+    
 
+br = open("klunssi","w")
+for f in fs.f_filelist:
+    br.write(f.d_longpath)
+    br.write("\n")
+br.close()
+
+   
+#cstruct = {}
+#cstruct["all"] = nt
+#fs.change_time("", cstruct)
+
+
+#for f in fs.f_entrylist:
+#    print f.filenumber, f.get_file_name()
 
