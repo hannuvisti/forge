@@ -28,6 +28,7 @@ import importlib
 PREFIX = "@@IMAGEDIR@@"
 MOUNTPOINT = "@@MOUNTPOINT@@"
 
+
 # Create your models here.
 class User(models.Model):
     ROLES = ((0,"Administrator"), (1,"Teacher"), (2,"Student"), (3,"Tester"))
@@ -136,7 +137,7 @@ class Case(models.Model):
                 failed_list.append([i,"No trivial strategies"])
                 continue
             filename = self.name+"-"+str(i)
- 
+            
             result =  command(size=self.size, garbage=self.garbage, clustersize=self.fsparam1, 
                                   name=filename)
             if result != 0:
@@ -388,7 +389,7 @@ class Image(models.Model):
         for f in files:
             path = f.file.path
             try:
-                shutil.copy(path,strategypath)
+                shutil.copyfile(path,strategypath)
                 tro = TrivialObject(image=self,file=f,path=strategy.path+"/"+f.name)
                 tro.save()
                 b = path.rsplit("/",1)[1]
@@ -397,6 +398,7 @@ class Image(models.Model):
 
                 inittime = inittime+filedelta
             except IOError:
+                raise
                 raise ForensicError("IO error / out of space")        
         return time_command_list
     

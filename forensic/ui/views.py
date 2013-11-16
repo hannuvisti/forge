@@ -79,6 +79,15 @@ def initDbView(request):
         f = FileSystem(name="ntfs", pythonpath="ntfsparser.ntfsc",pythoncreatecommand="NTFSCreateImage", 
                        fsclass = "NTFSC")
         f.save()
+        f = FileSystem(name="FAT12", pythonpath="fat.fat",pythoncreatecommand="FAT12CreateImage", 
+                       fsclass = "FATC")
+        f.save()
+        f = FileSystem(name="FAT16", pythonpath="fat.fat",pythoncreatecommand="FAT16CreateImage", 
+                       fsclass = "FATC")
+        f.save()
+        f = FileSystem(name="FAT32", pythonpath="fat.fat",pythoncreatecommand="FAT32CreateImage", 
+                       fsclass = "FATC")
+        f.save()
         h = HidingMethod(name="ADS", priority = 1, pythonpath="hiding.ads", pythonhideclass = "AlternateDataStream")
         h.save()
         h = HidingMethod(name="Deleted file", priority = 2, pythonpath="hiding.deletedfile", pythonhideclass = "DeletedFile")

@@ -49,19 +49,18 @@ FLAG_DIR = 0x16
 
 
 
-def FAT16CreateImage(name,size,parameters={}):
-    clustersize=4
+def FAT16CreateImage(name,size,clustersize,garbage,parameters={}):
+    """
     try:
         clustersize = parameters['clustersize']
     except KeyError:
         pass
     garbage=False
-
     try:
         garbage = parameters['garbage']
     except KeyError:
         pass
-
+    """
     if len(name) <= 8:
         imagename = name
     else:
@@ -72,7 +71,7 @@ def FAT16CreateImage(name,size,parameters={}):
     else:
         fill = "clean"
 
-    result = call([HELPER,"create","FAT16",str(size),str(clustersize),imagename,fill,name], shell=False)
+    result = call([HELPER,"create","FAT16",str(size),str(clustersize),str(512), imagename,fill,name], shell=False)
     return result
 
 
@@ -234,11 +233,18 @@ class DirEntry(object):
             for e in temp:
                 lname = lname + e[1:11] + e[14:26] + e[28:32]
             p = lname.find("\x00\x00")
-            if p != 0:
+            if p != -1:
+                if p%2 != 0:
+                    p = p+1
                 #self.d_longname = unicode(lname[0:p],errors="ignore",encoding="utf-16-le")
-                self.d_longname = lname[0:p].decode("utf-16-le")
+                try:
+                    self.d_longname = lname[0:p].decode("utf-16-le")
+                except UnicodeDecodeError:
+                    print self.d_unixname
+                    _hexdump(lname)
+                    exit(1)
             else:
-                self.d_longname = "This should not happen"
+                self.d_longname = lname.decode("utf-16-le")
         else:
             #self.d_longname = unicode(self.d_unixname,errors="ignore",encoding="utf-16-le")
             self.d_longname = unicode(self.d_unixname,errors="ignore")
@@ -481,7 +487,7 @@ class FATC(FileSystemC):
                 break
         i=0
         for q in self.f_filelist:
-            fe = FileEntry(i,q.d_path,q.d_ntfsflags,q)
+            fe = FileEntry(i,q.d_longpath,q.d_ntfsflags,q)
             i += 1
             self.f_entrylist.append(fe)
 
@@ -574,27 +580,65 @@ class FATC(FileSystemC):
             raise
 
     def implement_action(self,act):
-        pass
+        return "Not implemented"
+        fname = act[0]
+        action = act[1]
+        try:
+            m = self.find_file_by_path(fname)
+            stdtime = m.query_std_time()
+        except ForensicError:
+            raise
+        result=""
+        try:
+            actiontime = action["Read"]
+            btime = dict(atime=actiontime)
+            m.change_std_time(btime)
+            result += "File read %s" % actiontime      
+        except KeyError:
+            pass
+        try:
+            actiontime = action["Rename"]
+            btime = {}
+            btime["ctime"] = stdtime.ctime
+            btime["atime"] = stdtime.atime
+            btime["etime"] = stdtime.etime
+            btime["mtime"] = stdtime.mtime
+            m.change_fname_time(btime)
+            btime = {}
+            btime["atime"] = actiontime
+            btime["etime"] = actiontime
+            m.change_std_time(btime)
+            result += "File renamed %s" % actiontime
+        except KeyError:
+            pass
+        try:
+            actiontime = action["Edit"]
+            btime = {}
+            btime["mtime"] = actiontime
+            btime["atime"] = actiontime
+            btime["etime"] = actiontime
+            m.change_std_time(btime)
+            result += "File edited %s" % actiontime
+        except KeyError:
+            pass
+
 
 
 
 # Foo
 
-fs = FATC("/usr/local/forge/Images/pup", "/mnt/image")
-fs.fs_init()
+#fs = FATC("/usr/local/forge/Images/pup", "/mnt/image")
+#fs.fs_init()
 
-nt = datetime.datetime (1999,10,11,13,42,42)
+#nt = datetime.datetime (1999,10,11,13,42,42)
 
-for f in fs.get_list_of_files(4):
-    if f.filenumber == 90:
-        f.link.print_entry()
+#for f in fs.get_list_of_files(4):
+#    if f.filenumber == 90:
+#        f.link.print_entry()
     
 
-br = open("klunssi","w")
-for f in fs.f_filelist:
-    br.write(f.d_longpath)
-    br.write("\n")
-br.close()
+#q = fs.find_file_by_path("/FOO/PUP/Mounting a FAT32 drive in linux DaniWeb_files/widgets.js")
+
 
    
 #cstruct = {}
