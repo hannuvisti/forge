@@ -111,6 +111,28 @@ class FileHandler(object):
     def GetHandle():
         return FileHandler.gl_fh
 
+class DummyTime(object):
+    def __init__(self,p,date=None):
+        self.parent = p
+        self.t_data1="       "
+        self.t_data2="    "
+        if not date:
+            date = datetime.datetime(2010,1,1,1,1,1)
+
+        self.mtime = self.ctime = self.atime = date
+
+    def change_atime(self,newtime):
+        return
+    def change_mtime(self,newtime):
+        return
+    def change_ctime(self,newtime):
+        return
+    def change_all_times(self,newtime):
+        return
+    def print_entry(self):
+        print "Dummy time"
+
+
 
 class FATTime(object):
     def __init__(self,p,data1,data2):
@@ -205,8 +227,31 @@ class FATTime(object):
         print self.atime
 
 class DirEntry(object):
-    def __init__(self, parent, block,parentdir,loc):
+    def __init__(self, parent, block,parentdir,loc, dummy={}):
         self.parent = parent
+        self.d_dummy = False
+        if dummy:
+            self.d_parentdir = parentdir
+            self.d_flags = dummy["flags"]
+            self.d_dummy = True
+            self.d_cluster = 0
+            self.d_filename = ""
+            self.d_exists = True
+            self.d_extension = ""
+            self.d_ntfsflags = FlagConverter.convert_to_ntfs(self.d_flags)
+            self.d_location = -42000
+            self.d_filesize = 0
+            self.d_time = DummyTime(self)
+            self.d_slack = None
+            self.d_unixname = ""
+            self.d_longname = dummy["name"]
+            self.d_clusterchain = []
+            if parentdir:
+                self.d_longpath = self.d_parentdir.d_longpath + unicode("/",errors="strict") + self.d_longname
+            else:
+                self.d_longpath = unicode('/',errors="strict")+self.d_longname
+            return
+
         se = block[0][-1]
         q = se[0]
         if ord(q) == 0xE5 or ord(q) == 0:
@@ -291,6 +336,8 @@ class DirEntry(object):
         return name
 
     def read_file(self):
+        if self.d_dummy:
+            return None
         if len(self.d_clusterchain) > 0:
             buf = ""
             for i in self.d_clusterchain:
@@ -299,6 +346,8 @@ class DirEntry(object):
         else:
             return None
     def write_timestamps(self):
+        if self.d_dummy:
+            return None
         self.parent.write_location(self.d_location+13,self.d_time.t_data1)
         self.parent.write_location(self.d_location+22,self.d_time.t_data2)
 
@@ -485,6 +534,14 @@ class FATC(FileSystemC):
 
             except IndexError:
                 break
+        """ Create a dummy entry for root dir """
+        ddict = {}
+        ddict["name"] = "."
+        ddict["flags"] = FLAG_DIR
+        dummyroot = DirEntry(self,"",None,0,dummy=ddict)
+        self.f_filelist.append(dummyroot)
+
+        """ Create FileEntry structures """
         i=0
         for q in self.f_filelist:
             fe = FileEntry(i,q.d_longpath,q.d_ntfsflags,q)
@@ -505,6 +562,9 @@ class FATC(FileSystemC):
 
             
     """ Interface methods """
+    def fs_finalise(self):
+        pass
+
     def write_location(self, position, data):
         try:
             wh = open(self.fs_filename,"r+b");
@@ -575,7 +635,7 @@ class FATC(FileSystemC):
             if mtime:
                 m.change_mtime(mtime)
             if ctime:
-                change_ctime(ctime)
+                m.change_ctime(ctime)
         except ForensicError:
             raise
 
