@@ -40,7 +40,7 @@ def _hexdump(data,highlight=-1,endlight=-1):
     print "--"
 
 
-HELPER = "/usr/local/forge/chelper/chelper"
+HELPER = "@@CHELPER@@"
 FLAG_HIDDEN = 0x2
 FLAG_SYSTEM = 0x4
 FLAG_DIR = 0x16
@@ -50,17 +50,7 @@ FLAG_DIR = 0x16
 
 
 def FAT16CreateImage(name,size,clustersize,garbage,parameters={}):
-    """
-    try:
-        clustersize = parameters['clustersize']
-    except KeyError:
-        pass
-    garbage=False
-    try:
-        garbage = parameters['garbage']
-    except KeyError:
-        pass
-    """
+
     if len(name) <= 8:
         imagename = name
     else:
@@ -72,6 +62,51 @@ def FAT16CreateImage(name,size,clustersize,garbage,parameters={}):
         fill = "clean"
 
     result = call([HELPER,"create","FAT16",str(size),str(clustersize),str(512), imagename,fill,name], shell=False)
+    return result
+
+def FAT12CreateImage(name,size,clustersize,garbage,parameters={}):
+
+    if len(name) <= 8:
+        imagename = name
+    else:
+        imagename = name[:8]
+        
+    if garbage:
+        fill = "random"
+    else:
+        fill = "clean"
+
+    result = call([HELPER,"create","FAT12",str(size),str(clustersize),str(512), imagename,fill,name], shell=False)
+    return result
+
+def FAT32CreateImage(name,size,clustersize,garbage,parameters={}):
+
+    if len(name) <= 8:
+        imagename = name
+    else:
+        imagename = name[:8]
+        
+    if garbage:
+        fill = "random"
+    else:
+        fill = "clean"
+
+    result = call([HELPER,"create","FAT32",str(size),str(clustersize),str(512), imagename,fill,name], shell=False)
+    return result
+
+def FATGenericCreateImage(name,size,clustersize,garbage,parameters={}):
+
+    if len(name) <= 8:
+        imagename = name
+    else:
+        imagename = name[:8]
+        
+    if garbage:
+        fill = "random"
+    else:
+        fill = "clean"
+
+    result = call([HELPER,"create","GENERICFAT",str(size),str(clustersize),str(512), imagename,fill,name], shell=False)
     return result
 
 
@@ -367,7 +402,6 @@ class DirEntry(object):
 class FatTable(object):
     def __init__(self,buf,loc,par):
         self.rawdata = buf
-        print "FAT length",len(self.rawdata)
         self.parent = par
         self.location = loc
         if self.parent.fs_fstype == "FAT16":
@@ -384,15 +418,33 @@ class FatTable(object):
             return struct.unpack("<H",self.rawdata[start_char:start_char+2])[0]
         if self.bytes == 32:
             return struct.unpack("<I",self.rawdata[start_char:start_char+4])[0]
+        if self.bytes == 12:
+            if cluster % 2 != 0:
+                #hi = (ord(self.rawdata[start_char+1]) & 15) << 8
+                #lo = (ord(self.rawdata[start_char])) 
+                hi = (ord(self.rawdata[start_char+1])) << 4
+                lo = (ord(self.rawdata[start_char]) & 240) >> 4 
+            else:
+                #hi = (ord(self.rawdata[start_char+1])) << 4
+                #lo = (ord(self.rawdata[start_char]) & 240) >> 4
+                hi = (ord(self.rawdata[start_char+1]) & 15) << 8
+                lo = (ord(self.rawdata[start_char])) 
+            fatvalue = hi | lo
+            return fatvalue
+                
         return "foo"
 
     def get_cluster_chain(self,cl=0):
         eoc = 2**self.bytes-1
+        if self.bytes == 32:
+            eoc = 0x0fffffff
         t = cl
         result = [cl]
         while True:
             s = self.get_cluster_value(t)
             if s == 0 or s == eoc:
+                return result
+            if self.bytes == 12 and s >= 0xff0:
                 return result
             result.append(s)
             t = s
@@ -415,12 +467,33 @@ class FATC(FileSystemC):
 
     def __init__(self,fname,mountpoint="/mnt/image"):
         super(FATC, self).__init__(fname,mountpoint)
-        self.fs_fstype = "FAT16"
+        #self.fs_fstype = ""
         self.f_mounted = False
         self.f_filelist = []
+        """ first set fs_fstype variable 
 
-        
+        try:
+            gfile = open(fname,"r")
+            vbr = gfile.read(512)
+            gfile.close()
+        except IOError:
+            raise ForensicError("Can't init filesystem type")
+        fstype_string, = struct.unpack("5s",vbr[54:59])
+        if fstype_string == "FAT12":
+            self.fs_fstype = "FAT12"
+        if fstype_string == "FAT16":
+            self.fs_fstype = "FAT16"
+        if self.fs_fstype == "":
+            fstype_string, = struct.unpack("5s", vbr[82:87])
+            print >>sys.stderr, fstype_string
+            if fstype_string == "FAT32":
+                self.fs_fstype == "FAT32"
+            else:
+                raise ForensicError("Unknown FAT FS type")
+        """
+
     def fat_vbr_init(self, vbr):
+
         self.f_sectorsize, = struct.unpack("<H", vbr[11:13])
         self.f_clustersize = self.f_sectorsize * struct.unpack("B",vbr[13])[0]
         self.f_reserved, = struct.unpack("<H", vbr[14:16])
@@ -437,6 +510,17 @@ class FATC(FileSystemC):
         self.f_slack = []
         self.f_filelist = []
         self.f_entrylist = []
+        fstype_string, = struct.unpack("5s",vbr[54:59])
+        if fstype_string == "FAT12":
+            self.fs_fstype = "FAT12"
+        if fstype_string == "FAT16":
+            self.fs_fstype = "FAT16"
+        if self.fs_fstype == "":
+            fstype_string, = struct.unpack("5s", vbr[82:87])
+            if fstype_string == "FAT32":
+                self.fs_fstype = "FAT32"
+            else:
+                raise ForensicError("Unknown FAT FS type")
         
     """ returns cluster location in sectors """
     def locate_cluster(self, cl):
@@ -474,10 +558,10 @@ class FATC(FileSystemC):
             
 
     def fs_init(self):
+
         self.fs_fh.seek(0)
         buf = self.fs_fh.read(512)
         self.fat_vbr_init(buf)
-        self.print_vbr()
 
         self.fs_fh.seek(self.f_sectorsize*self.f_reserved)
         buf = self.fs_fh.read(self.f_fatsize*self.f_sectorsize)
@@ -485,7 +569,10 @@ class FATC(FileSystemC):
 
         
         self.fs_fh.seek(self.f_sectorsize*self.f_rootstart)
-        rootdir = self.fs_fh.read(self.f_rootentries * 32)
+        if self.fs_fstype == "FAT12" or self.fs_fstype == "FAT16":
+            rootdir = self.fs_fh.read(self.f_rootentries * 32)
+        if self.fs_fstype == "FAT32":
+            rootdir = self.fs_fh.read(2048)
         """ process root dir """
         dir_stack = []
         dirent = self._process_dir(rootdir)
@@ -529,7 +616,10 @@ class FATC(FileSystemC):
                             pass
                         else:
                             dir_stack.append(d)
-                    self.f_filelist.append(d)
+                    if d.d_filename == ".       " or d.d_filename == "..      ":
+                        pass
+                    else:
+                        self.f_filelist.append(d)
 
 
             except IndexError:
@@ -606,7 +696,8 @@ class FATC(FileSystemC):
             s = f.get_file_name()
             if s == path:
                 return f
-        raise ForensicError("File not found FFBP")
+        emessage = "File not found: "+path
+        raise ForensicError(emessage)
 
     def change_time(self,fname,btime):
         atime=ctime=mtime=None
