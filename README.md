@@ -1,7 +1,6 @@
-# ForGe
+# ForGE
 
 Forensic test image generator v1.1
-<br>
 Copyright Hannu Visti 2013, licenced under Gnu General Public Licence
 
 ## Overview
@@ -51,3 +50,6 @@ Hannu Visti
 hannu.visti@gmail.com
 
 Comment, suggestions and feedback are welcome. 
+
+
+

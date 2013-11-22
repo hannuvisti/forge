@@ -4,13 +4,16 @@
 #define MKFS_NTFS "/sbin/mkfs.ntfs"
 #define NTFS_3G "/bin/ntfs-3g"
 #define UMOUNT "/bin/umount"
+#define MKFS_FAT "/sbin/mkfs.msdos"
+#define MOUNT_FAT "/bin/mount"
+
 
 /* Path for ready images */
 #define PATH "@@IMAGEDIR@@/"
 
-
 /* Path where images in process are temporarily mounted */
 #define MOUNTPOINT "@@MOUNTPOINT@@"
+
 #define MAX_PATH_LENGTH 256
 
 #define C_RANDOM 1

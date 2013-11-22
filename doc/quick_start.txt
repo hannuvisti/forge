@@ -1,0 +1,64 @@
+Welcome to ForGe, a computer forensic test image generator.
+
+ForGe currently supports NTFS and FAT file systems (file actions not yet
+supported in FAT).  Follow installation instructions (run the installation
+script and pre_populate database), and follow these steps to start using
+ForGe:
+
+
+1) Navigate to http://localhost:8000/ui/main to get started
+
+2) Choose "Trivial files" and drag & drop trivial files to the repository.
+   Good trivial files are smallish and of various types. ForGe detects
+   images, audio files, documents, executables and certain other file types.
+   However, the categorisation can be changed in admin view
+
+3) Choose "Secret files" and drag & drop hidden file candidates to upload
+   them to repository. 
+
+
+
+Now a case can be created. This requires the admin interface
+http://localhost:8000/admin/ui. Use the username/passwd prompted when 
+initialising Django database.
+
+4) Assign categories to hidden files. Choose "hidden file items" and 
+   change "group" for each item to non-zero. Groups can be anything numerical
+   and a group can have none, one or several files in it. 
+
+5) Create a case. 
+   Fsparam1 is the cluster size in sectors (4 = 2048 etc). 
+   NOTE FAT file systems: you can choose between FAT12/FAT16/FAT32. However,
+   Linux mkfs.msdos generally returns an error if a file system / number of 
+   clusters combination is abnormal. Smaller FAT sizes have their limitations
+   but it seems to be impossible to create a small FAT32 image. By choosing 
+   only "FAT", the cluster size paramter is ignored and a "suitable" FAT
+   file system size is chosen automatically. This is strongly recommended. 
+   If you want to choose manually, I have been able to create a FAT12 file 
+   system with 3M file size, FAT16 with 25M file size and FAT32 with 256M
+   file size, with cluster size 4
+
+6) Create at least one trivial strategy. This puts the "bulk" on file systems,
+   for example /holiday containing pictures and /doc containing documents. 
+   ForGe chooses randomly the requested amount of trivial files from the 
+   repository
+
+7) Create secret strategies. This is the data hiding functionality. Group
+   references to secret file groups (4). If a file is alone in its group,
+   it will be hidden in each image. If a group is formed of several files, 
+   exactly one is chosen randomly. 
+   File actions and instructions are optional (actions currently not supported
+   in FAT), read the enclosed documentation about actions. 
+
+8) Return to the main user interface. Choose "Images" and create 
+
+9) If curious, display cheat sheets in "Solutions" after image creation. 
+
+
+
+
+
+Hannu Visti
+hannu.visti@gmail.com
+ 
+   

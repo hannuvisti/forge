@@ -76,8 +76,20 @@ def initDbView(request):
     if len(foo) == 0:
         u1 = User(name="forge", role=0, valid_until="2013-12-31")
         u1.save()
-        f = FileSystem(name="ntfs", pythonpath="ntfsparser.ntfsc",pythoncreatecommand="NTFSCreateImage", 
+        f = FileSystem(name="NTFS", pythonpath="ntfsparser.ntfsc",pythoncreatecommand="NTFSCreateImage", 
                        fsclass = "NTFSC")
+        f.save()
+        f = FileSystem(name="FAT12", pythonpath="fat.fat",pythoncreatecommand="FAT12CreateImage", 
+                       fsclass = "FATC")
+        f.save()
+        f = FileSystem(name="FAT16", pythonpath="fat.fat",pythoncreatecommand="FAT16CreateImage", 
+                       fsclass = "FATC")
+        f.save()
+        f = FileSystem(name="FAT32", pythonpath="fat.fat",pythoncreatecommand="FAT32CreateImage", 
+                       fsclass = "FATC")
+        f.save()
+        f = FileSystem(name="FAT", pythonpath="fat.fat",pythoncreatecommand="FATGenericCreateImage", 
+                       fsclass = "FATC")
         f.save()
         h = HidingMethod(name="ADS", priority = 1, pythonpath="hiding.ads", pythonhideclass = "AlternateDataStream")
         h.save()
@@ -92,7 +104,7 @@ def initDbView(request):
         h = HidingMethod(name="Not hidden", priority = 3, pythonpath="hiding.donothide", pythonhideclass="DoNotHideFile")
         h.save()
         c=Case(name="casetest", owner=User.objects.get(name="forge"), date_created="2013-06-01", 
-               size="10M", amount=3, garbage=False,fsparam1=8, weekvariance=26, filesystem= FileSystem.objects.get(name="ntfs"),
+               size="10M", amount=3, garbage=False,fsparam1=8, weekvariance=26, filesystem= FileSystem.objects.get(name="NTFS"),
                roottime=datetime.datetime(2010,7,16,3,42,42))
         c.save()
         #c.trivialstrategy_set.create(type=0, quantity=2,  exact = False, path="/holiday",

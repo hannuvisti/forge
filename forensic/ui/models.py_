@@ -25,8 +25,11 @@ import importlib
 
 #from django.core.validators import MinValueValidator, MaxValueValidator
 
+#PREFIX = "/usr/local/forge/Images"
+#MOUNTPOINT = "/mnt/image"
 PREFIX = "@@IMAGEDIR@@"
 MOUNTPOINT = "@@MOUNTPOINT@@"
+
 
 # Create your models here.
 class User(models.Model):
@@ -130,13 +133,17 @@ class Case(models.Model):
             return None
         failed_list=[]
         succeed_list = []
-        
+        try:
+            removed_chmod = os.chmod
+            del os.chmod
+        except AtrributeError:
+            removed_chmod = None
         for i in range(1,self.amount+1):
             if self.trivialstrategy_set.count() == 0:
                 failed_list.append([i,"No trivial strategies"])
                 continue
             filename = self.name+"-"+str(i)
- 
+            
             result =  command(size=self.size, garbage=self.garbage, clustersize=self.fsparam1, 
                                   name=filename)
             if result != 0:
@@ -147,6 +154,7 @@ class Case(models.Model):
             image.save()
             mount_file = image.getLongFilename()
             fsystem = fsclass(mount_file, MOUNTPOINT)
+            fsystem.fs_init()
             if fsystem.mount_image() != 0:
                 failed_list.append([i,"Cannot mount image file"])
                 uitools.errlog("--- Cannot mount file, image not processed")
@@ -208,7 +216,6 @@ class Case(models.Model):
             except ForensicError as fe:
                 failed_list.append([i,fe])
                 uitools.errlog(fe)
-
                 fsystem.dismount_image()
                 os.remove(mount_file)
                 image.delete()
@@ -304,6 +311,8 @@ class Case(models.Model):
                 image.delete()
                 continue               
             succeed_list.append(i)
+        if removed_chmod != None:
+            setattr(os, "chmod", removed_chmod)
         return [succeed_list,failed_list]
             
 class TrivialStrategy(models.Model):
@@ -397,6 +406,7 @@ class Image(models.Model):
 
                 inittime = inittime+filedelta
             except IOError:
+                raise
                 raise ForensicError("IO error / out of space")        
         return time_command_list
     

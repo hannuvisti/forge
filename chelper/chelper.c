@@ -302,6 +302,45 @@ int mount_ntfs_filesystem(char *device) {
   return (-1);
 }
 
+/* Mount FAT file system */
+int mount_fat_filesystem(char *device) {
+  int result;
+  pid_t pid;
+
+  if (!is_dir_empty(MOUNTPOINT)) {
+    fprintf(stderr,"Mount point not empty\n");
+    return (-1);
+  }
+  char *arg[] = {MOUNT_FAT, "-t", "vfat", "-o", "umask=000", device, MOUNTPOINT, NULL};
+  
+  pid = fork();
+  if (pid == -1) {
+    perror(PNAME);
+    exit(1);
+  }
+  if (pid == 0) {
+    /* 
+       Tuxera NTFS-3g does not work for a setuid process unless ntfs3g-binary
+       is suid root as well. This is discouraged, so we camouflage the fact
+       that the program is running setuid 
+    */
+    setresuid(0,0,0);
+    if (execv(MOUNT_FAT, arg) == -1) {
+      fprintf(stderr, "this should not happen\n");
+      exit(1);
+    }
+    /* Not reached */
+    return (-1);
+  }
+  else {
+    wait (&result);
+    return (result);
+  }
+  /* Not reached */
+
+  return (-1);
+}
+
 /* Attach a file to a loopback interface. Return char* to loopback device name 
    After this function the rest of the program can assure the loopback device is 
    "owned" by this process 
@@ -429,6 +468,113 @@ char *attach_file(char *prefix, char *command) {
     }
   }
 }
+
+/* Creates FAT filesystem */
+int create_fat_filesystem(char *prefix, char *fattype, char *filename, char *partname, int sector_size, char *cluster_size) {
+  char *path, *output, fatso[3];
+  int i, result=0, ipipe[2];
+  char sector_string[8];
+  char *arg[11];
+  pid_t pid;
+
+  if (setuid(getuid()) == -1) {
+    perror(PNAME);
+    exit(1);
+  }
+
+  if (filename == NULL) {
+    fprintf(stderr, "filename unset\n");
+    exit(1);
+  }
+  if (partname == NULL) {
+    fprintf(stderr, "partition name unset\n");
+    exit(1);
+  }
+  path = malloc(sizeof(char)*(strlen(prefix)+strlen(filename)+1));
+  if (path == NULL) {
+    perror(PNAME);
+    exit(1);
+  }
+  strcpy(path, prefix);
+  strcat(path, filename);
+  sanitize_path(path);
+
+  sprintf(sector_string, "%d", sector_size);
+  if (strcmp(fattype, "GENERICFAT") == 0) {
+    /* char *arg = {MKFS_FAT, "-S", sector_string, "-s", cluster_size, "-n", partname, path, NULL}; */
+    arg[0] = MKFS_FAT;
+    arg[1] = "-S";
+    arg[2] = sector_string;
+    arg[3] = "-n";
+    arg[4] = partname;
+    arg[5] = path;
+    arg[6] = NULL;
+  }
+  else {
+    strcpy(fatso, fattype+3);
+    /*    arg = {MKFS_FAT, "-F", fatso, "-S", sector_string, "-s", cluster_size, "-n", partname, path, NULL}; */
+    arg[0] = MKFS_FAT;
+    arg[1] = "-S";
+    arg[2] = sector_string;
+    arg[3] = "-s";
+    arg[4] = cluster_size;
+    arg[5] = "-n";
+    arg[6] = partname;
+    arg[7] = "-F";
+    arg[8] = fatso;
+    arg[9] = path;
+    arg[10] = NULL;
+  }
+  if (pipe(ipipe)) {
+    perror(PNAME);
+    exit(1);
+  }
+  pid = fork();
+  if (pid == -1) {
+    perror(PNAME);
+    exit(1);
+  }
+  if (pid == 0) {
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+
+    dup2(ipipe[1], STDOUT_FILENO);
+    dup2(ipipe[1], STDERR_FILENO);
+    close(ipipe[0]);
+    close(ipipe[1]);
+
+    if (execv(MKFS_FAT, arg) == -1) {
+      perror(PNAME);
+      exit(1);
+    }
+    /* This is never reached */
+    return (1);
+  }
+  else {
+    close(ipipe[1]);
+    output = malloc(4096*sizeof(char));
+    if (output == NULL) {
+      perror(PNAME);
+      exit(1);
+    }
+    output[read(ipipe[0],output,4095)] = 0;
+    wait (&result);
+    if (strstr(output, "WARNING:") != NULL) {
+      fprintf(stderr, "wrong sector/cluster combination - not able to create FAT\n");
+      exit(1);
+    }
+    if (strstr(output, "Too many clusters") != NULL) {
+      fprintf(stderr, "Too many clusters for FAT file system\n");
+      exit(1);
+    }
+    exit(0);
+  }
+  /* never reached */
+  fprintf(stderr, "something is wrong \n");
+  exit(1);
+}
+
+
 /* Creates a NTFS by executing mkfs.ntfs. This does not need root privileges */
 int create_ntfs_filesystem(char *prefix, char *filename, char *partname, int cluster_size) {
   /*  char *arg[20];*/
@@ -552,7 +698,7 @@ void create_file(char *prefix, char *filename, long size, int contents) {
 
 main (int argc, char **argv) {
   char *params[10], *lodevice;
-  char *prefix, *param, *mountpoint;
+  char *prefix, *fname, *mountpoint;
   pid_t pid, cluster_size=0;
   int status,opt=0,q=0;
   long size=0;
@@ -594,50 +740,106 @@ main (int argc, char **argv) {
   }
 
   if (strcmp(argv[1], "create") == 0) {
-    if (argc != 8) {
-      fprintf(stderr,"Usage: %s create fstype size cluster_size name [clean | random] filename\n", PNAME);
+    if (argc < 2) {
+      fprintf(stderr,"Usage: %s create ntfs|FAT16 ...\n", PNAME);
       exit(1);
-    }
-    /* freopen("/dev/null","w",stderr);*/
-    if (strlen(argv[3]) > 12) {
-      fprintf(stderr,"Too long size parameter\n");
-      exit(1);
-    }
-    size = calculate_size(argv[3]);
-    if (strlen(argv[7]) > MAX_PATH_LENGTH) {
-      fprintf(stderr, "Too long parameter %s\n", argv[7]);
-      exit(1);
-    }
-    param = malloc(sizeof(char)*strlen(argv[7])+1);
-    if (param == NULL) {
-      perror(PNAME);
-      exit(1);
-    }
-    strcpy(param, argv[7]);
-    if ((atoi(argv[4]) < 1 || atoi (argv[4]) > 32) || atoi(argv[4]) & 1) {
-      fprintf(stderr,"Cluster size must be a multiple of 2 and max 32\n");
-      exit(1);
-    }
-    cluster_size = atoi(argv[4])*512;
-
-    /* Generally we could be more allowing here but use the same routine
-       for reasons of pure laziness. 
-       Technically only white space, ?, *, " and ' should be really 
-       frowned upon here 
-    */
-    sanitize_path(argv[5]);
-    if (strlen(argv[5]) > 20) {
-      fprintf(stderr, "too long parameter %s", argv[5]);
-      exit(1);
-    }
-    if (strcmp(argv[6], "random") == 0) {
-      create_file(prefix, param, size, C_RANDOM);
-    } 
-    else {
-      create_file(prefix, param, size, C_ZERO);
     }
     if (strcmp(argv[2], "ntfs") == 0) {
-      create_ntfs_filesystem(prefix, param, argv[5], cluster_size);
+      if (argc != 8) {
+	fprintf(stderr,"Usage: %s create fstype size cluster_size name [clean | random] filename\n", PNAME);
+	exit(1);
+      }
+      /* freopen("/dev/null","w",stderr);*/
+      if (strlen(argv[3]) > 12) {
+	fprintf(stderr,"Too long size parameter\n");
+	exit(1);
+      }
+      size = calculate_size(argv[3]);
+      if (strlen(argv[7]) > MAX_PATH_LENGTH) {
+	fprintf(stderr, "Too long parameter %s\n", argv[7]);
+	exit(1);
+      }
+      fname = malloc(sizeof(char)*strlen(argv[7])+1);
+      if (fname == NULL) {
+	perror(PNAME);
+	exit(1);
+      }
+      strcpy(fname, argv[7]);
+      if ((atoi(argv[4]) < 1 || atoi (argv[4]) > 32) || atoi(argv[4]) & 1) {
+	fprintf(stderr,"Cluster size must be a multiple of 2 and max 32\n");
+	exit(1);
+      }
+      cluster_size = atoi(argv[4])*512;
+
+      /* Generally we could be more allowing here but use the same routine
+	 for reasons of pure laziness. 
+	 Technically only white space, ?, *, " and ' should be really 
+	 frowned upon here 
+      */
+      sanitize_path(argv[5]);
+      if (strlen(argv[5]) > 20) {
+	fprintf(stderr, "too long parameter %s", argv[5]);
+	exit(1);
+      }
+      if (strcmp(argv[6], "random") == 0) {
+	create_file(prefix, fname, size, C_RANDOM);
+      } 
+      else {
+	create_file(prefix, fname, size, C_ZERO);
+      }
+      create_ntfs_filesystem(prefix, fname, argv[5], cluster_size);
+      exit(0);
+    }
+    if ((strcmp(argv[2], "FAT16") == 0) || (strcmp(argv[2],"FAT32") == 0) || (strcmp(argv[2], "FAT12") == 0) || 
+	(strcmp(argv[2], "GENERICFAT") == 0)) {
+      if (argc != 9) {
+	fprintf(stderr,"Usage: %s create FAT16|FAT12|FAT32 size cluster_size sector_size name [clean | random] filename\n", PNAME);
+	exit(1);
+      }
+      /* freopen("/dev/null","w",stderr);*/
+      if (strlen(argv[3]) > 12) {
+	fprintf(stderr,"Too long size parameter\n");
+	exit(1);
+      }
+      size = calculate_size(argv[3]);
+      if (strlen(argv[8]) > MAX_PATH_LENGTH) {
+	fprintf(stderr, "Too long parameter %s\n", argv[8]);
+	exit(1);
+      }
+      fname = malloc(sizeof(char)*strlen(argv[7])+1);
+      if (fname == NULL) {
+	perror(PNAME);
+	exit(1);
+      }
+      strcpy(fname, argv[8]);
+      if ((atoi(argv[4]) < 1 || atoi (argv[4]) > 32) || atoi(argv[4]) & 1) {
+	fprintf(stderr,"Cluster size must be a multiple of 2 and max 32\n");
+	exit(1);
+      }
+      cluster_size = atoi(argv[4])*512;
+      if ((atoi(argv[5]) < 512 || atoi (argv[5]) > 32768) || (atoi(argv[5]) & (atoi(argv[5])-1))) {
+	fprintf(stderr,"Sector size must be a multiple of 512, max 32768 and a power of two\n");
+	exit(1);
+      }
+      /* Generally we could be more allowing here but use the same routine
+	 for reasons of pure laziness. 
+	 Technically only white space, ?, *, " and ' should be really 
+	 frowned upon here 
+      */
+      sanitize_path(argv[6]);
+      if (strlen(argv[6]) > 11) {
+	fprintf(stderr, "too long parameter %s (max 11 chars)\n", argv[6]);
+	exit(1);
+      }
+
+      if (strcmp(argv[7], "random") == 0) {
+	create_file(prefix, fname, size, C_RANDOM);
+      } 
+      else {
+	create_file(prefix, fname, size, C_ZERO);
+      }
+
+      create_fat_filesystem(prefix, argv[2], fname, argv[6], atoi(argv[5]),argv[4]);
       exit(0);
     }
     else {
@@ -658,17 +860,23 @@ main (int argc, char **argv) {
       fprintf(stderr, "Too long parameter %s\n", argv[3]);
       exit(1);
     }
-    param = malloc(sizeof(char)*strlen(argv[3])+1);
-    if (param == NULL) {
+    fname = malloc(sizeof(char)*strlen(argv[3])+1);
+    if (fname == NULL) {
       perror(PNAME);
       exit(1);
     }
-    strcpy(param, argv[3]);
-    lodevice = attach_file(prefix,param);
+    strcpy(fname, argv[3]);
+    lodevice = attach_file(prefix,fname);
     if (lodevice) {
       if (strcmp(argv[2],"ntfs") == 0) {
 	q = mount_ntfs_filesystem(lodevice);
 	if (q != 0) 
+	  detach_device(lodevice);
+	exit(q);
+      }
+      if (strncmp(argv[2], "FAT",3 ) == 0) {
+	q = mount_fat_filesystem(lodevice);
+	if (q != 0)
 	  detach_device(lodevice);
 	exit(q);
       }
