@@ -81,6 +81,11 @@ echo "process ntfsc.py"
 cat $APPDIR/creator/ntfsparser/ntfsc.py_ | sed s#@@CHELPER@@#$CHELPER# > $APPDIR/creator/ntfsparser/ntfsc.py 
 rm $APPDIR/creator/ntfsparser/ntfsc.py_
 
+echo "process fat.py"
+cat $APPDIR/creator/fat/fat.py_ | sed s#@@CHELPER@@#$CHELPER# > $APPDIR/creator/fat/fat.py
+rm $APPDIR/creator/ntfsparser/ntfsc.py_
+
+
 echo "creating chelper"
 cat $CHELPERDIR/chelper.h_ | sed s#@@IMAGEDIR@@#$IMAGEDIR# | sed s#@@MOUNTPOINT@@#$MOUNTDIR# > $CHELPERDIR/chelper.h
 cd $CHELPERDIR

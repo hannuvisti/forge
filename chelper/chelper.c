@@ -469,11 +469,12 @@ char *attach_file(char *prefix, char *command) {
   }
 }
 
-/* Creates FAT16 filesystem */
-int create_fat16_filesystem(char *prefix, char *filename, char *partname, int sector_size, char *cluster_size) {
-  char *path, *output;
+/* Creates FAT filesystem */
+int create_fat_filesystem(char *prefix, char *fattype, char *filename, char *partname, int sector_size, char *cluster_size) {
+  char *path, *output, fatso[3];
   int i, result=0, ipipe[2];
   char sector_string[8];
+  char *arg[11];
   pid_t pid;
 
   if (setuid(getuid()) == -1) {
@@ -499,8 +500,31 @@ int create_fat16_filesystem(char *prefix, char *filename, char *partname, int se
   sanitize_path(path);
 
   sprintf(sector_string, "%d", sector_size);
-
-  char *arg[] = {MKFS_FAT, "-F", "16", "-S", sector_string, "-s", cluster_size, "-n", partname, path, NULL};
+  if (strcmp(fattype, "GENERICFAT") == 0) {
+    /* char *arg = {MKFS_FAT, "-S", sector_string, "-s", cluster_size, "-n", partname, path, NULL}; */
+    arg[0] = MKFS_FAT;
+    arg[1] = "-S";
+    arg[2] = sector_string;
+    arg[3] = "-n";
+    arg[4] = partname;
+    arg[5] = path;
+    arg[6] = NULL;
+  }
+  else {
+    strcpy(fatso, fattype+3);
+    /*    arg = {MKFS_FAT, "-F", fatso, "-S", sector_string, "-s", cluster_size, "-n", partname, path, NULL}; */
+    arg[0] = MKFS_FAT;
+    arg[1] = "-S";
+    arg[2] = sector_string;
+    arg[3] = "-s";
+    arg[4] = cluster_size;
+    arg[5] = "-n";
+    arg[6] = partname;
+    arg[7] = "-F";
+    arg[8] = fatso;
+    arg[9] = path;
+    arg[10] = NULL;
+  }
   if (pipe(ipipe)) {
     perror(PNAME);
     exit(1);
@@ -536,7 +560,11 @@ int create_fat16_filesystem(char *prefix, char *filename, char *partname, int se
     output[read(ipipe[0],output,4095)] = 0;
     wait (&result);
     if (strstr(output, "WARNING:") != NULL) {
-      fprintf(stderr, "wrong sector/cluster combination - not able to create FAT16\n");
+      fprintf(stderr, "wrong sector/cluster combination - not able to create FAT\n");
+      exit(1);
+    }
+    if (strstr(output, "Too many clusters") != NULL) {
+      fprintf(stderr, "Too many clusters for FAT file system\n");
       exit(1);
     }
     exit(0);
@@ -762,9 +790,10 @@ main (int argc, char **argv) {
       create_ntfs_filesystem(prefix, fname, argv[5], cluster_size);
       exit(0);
     }
-    if (strcmp(argv[2], "FAT16") == 0) {
+    if ((strcmp(argv[2], "FAT16") == 0) || (strcmp(argv[2],"FAT32") == 0) || (strcmp(argv[2], "FAT12") == 0) || 
+	(strcmp(argv[2], "GENERICFAT") == 0)) {
       if (argc != 9) {
-	fprintf(stderr,"Usage: %s create FAT16 size cluster_size sector_size name [clean | random] filename\n", PNAME);
+	fprintf(stderr,"Usage: %s create FAT16|FAT12|FAT32 size cluster_size sector_size name [clean | random] filename\n", PNAME);
 	exit(1);
       }
       /* freopen("/dev/null","w",stderr);*/
@@ -810,7 +839,7 @@ main (int argc, char **argv) {
 	create_file(prefix, fname, size, C_ZERO);
       }
 
-      create_fat16_filesystem(prefix, fname, argv[6], atoi(argv[5]),argv[4]);
+      create_fat_filesystem(prefix, argv[2], fname, argv[6], atoi(argv[5]),argv[4]);
       exit(0);
     }
     else {
@@ -845,7 +874,7 @@ main (int argc, char **argv) {
 	  detach_device(lodevice);
 	exit(q);
       }
-      if (strcmp(argv[2], "FAT16") == 0) {
+      if (strncmp(argv[2], "FAT",3 ) == 0) {
 	q = mount_fat_filesystem(lodevice);
 	if (q != 0)
 	  detach_device(lodevice);
