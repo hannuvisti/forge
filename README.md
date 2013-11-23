@@ -1,6 +1,6 @@
 # ForGE
 
-Forensic test image generator v1.1
+Forensic test image generator v1.9.1
 Copyright Hannu Visti 2013, licenced under Gnu General Public Licence
 
 ## Overview
@@ -9,14 +9,14 @@ ForGe is a tool designed to build computer forensic test images. It was done as 
 the University of Westminster. Its main features include:
 
 * Web browser user interface
-* Rapid batch image creation (only NTFS supported)
+* Rapid batch image creation (NTFS and FAT)
 * Possibility to define a scenario including trivial and hidden items on images
 * Variance between images. For example, if ForGe was told to put 10-20 picture files to a directory /holiday and
   create 10 images, all these images would have random pictures pulled from repository.
 * Variance in timestamps. Each trivial and hidden file can be timestamped to a specific time. Each scenario is
   given a time variance parameter in weeks. If this is set to 0, every image receives an identical timeline. If
   nonzero, a random amount of weeks up to the maximum set is added to each file on each image
-* Can modify timestamps to simulate certain disk actions (move, copy, rename, delete)
+* Can modify timestamps to simulate certain disk actions (move, copy, rename, delete). Disk actions currently available only for NTFS.
 * Implements several data hiding methods: Alternate data streams, extension change, file deletion, concatenation
   of files and file slack space. 
 * New data hiding methods can be easily implemented. Adding a new file system is also documented.
@@ -41,7 +41,7 @@ The tool was and still is an academic project to be used by forensic experts. It
 NTFS parser component can be of interest to other file system related projects. It parses the most complex NTFS attributes (directory structures) and allows a framework to extend upon. 
 
 ## Documentation
-A simple manual and extension design notes can be found in Documentation. 
+A simple manual and extension design notes can be found in Documentation. A quick start guide explains the image creation basics. 
 
 
 ### Author and contact details
