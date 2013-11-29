@@ -83,7 +83,7 @@ rm $APPDIR/creator/ntfsparser/ntfsc.py_
 
 echo "process fat.py"
 cat $APPDIR/creator/fat/fat.py_ | sed s#@@CHELPER@@#$CHELPER# > $APPDIR/creator/fat/fat.py
-rm $APPDIR/creator/ntfsparser/ntfsc.py_
+rm $APPDIR/creator/fat/fat.py_
 
 
 echo "creating chelper"

@@ -107,12 +107,12 @@ def initDbView(request):
                size="10M", amount=3, garbage=False,fsparam1=8, weekvariance=26, filesystem= FileSystem.objects.get(name="NTFS"),
                roottime=datetime.datetime(2010,7,16,3,42,42))
         c.save()
-        #c.trivialstrategy_set.create(type=0, quantity=2,  exact = False, path="/holiday",
-        #                             dirtime = datetime.datetime(2010,12,24,17,0,0))
-        #c.trivialstrategy_set.create(type=1, quantity=2, exact = True, path="/doc",
-        #                             dirtime = datetime.datetime(2011,2,28,9,30,15))
-        #c.secretstrategy_set.create(method=h, group = 1)
-        #c.save()
+        c.trivialstrategy_set.create(type=0, quantity=2,  exact = True, path="/holiday",
+                                     dirtime = datetime.datetime(2010,12,24,17,0,0))
+        c.trivialstrategy_set.create(type=1, quantity=2, exact = True, path="/doc",
+                                     dirtime = datetime.datetime(2011,2,28,9,30,15))
+        c.secretstrategy_set.create(method=h, group = 1, filetime = datetime.datetime(2008,5,25,10,42,32))
+        c.save()
         
     return HttpResponse("ok")
 

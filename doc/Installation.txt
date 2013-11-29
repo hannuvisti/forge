@@ -59,13 +59,23 @@ Run install.sh
 
 *** INSTALL.SH MUST BE RUN AS ROOT ***
 Follow instructions about setting up database and starting the web server.
-      Start web browser and navigate to 
-      http://localhost:8000/ui/init_db
-      if you get "ok", the application is ready to use. 
+
+
+**** IMPORTANT ****
+Start web browser and navigate to 
+http://localhost:8000/ui/init_db
+if you get "ok", the application is ready to use. 
+NB: Without the above step, database has no file systems or hiding methods. 
+This task must be done only once to a clean database installation. 
 
 Access the UI by either
 http://localhost:8000/ui/main  (application)
 http://localhost:8000/admin/ui (database administration)
+
+
+
+
+
 
 
 

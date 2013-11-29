@@ -1,5 +1,70 @@
 Welcome to ForGe, a computer forensic test image generator.
 
+
+
+------------Example case-----------------------------------------
+If you have completed database initialisation (navigated once to 
+http://localhost:8000/ui/init_db), there is an example case with
+two trivial and one secret strategy preinstalled in the database. 
+This case requires three steps to be fully operational:
+
+1) Navigate to http://localhost:8000/ui/files. Drag and drop
+   at least two picture files (jpg,gif, bmp etc) to the drag and
+   drop space, and repeat with at least two document files (doc, docx,
+   xls, pdf).  This feeds the system with trivial files. 
+
+2) Navigate to http://localhost:8000/ui/secretfiles (or just choose
+   "secret files" from the green menu bar in the user interface). 
+   Drag and drop at least one file of any kind to the drag and drop
+   zone. This populates the secret files repository. 
+
+3) Access the administration user interface at 
+   http://localhost:8000/admin/ui/secretfileitem/
+   If prompted for username and password, this is the account created
+   earlier when running manage.py syncdb and prompted for username and
+   password. 
+   The uploaded secret file or files should be there. Assign at least one
+   uploaded file to group 1. This completes the setup.
+
+
+
+Back in the application user interface http://localhost:8000/ui/images
+click "casetest" in the yellow sidebar to get the fields populated with 
+the case parameters. Click "create" and eventually a result sheet should
+show completion of three images numbered 1 2 3. If images failed, the reason
+of failure is shown. 
+
+Return to the main user interface by the browser back arrow. Choose "solutions", 
+click on "casetest" in the yellow side bar, choose an image and click
+"print report" to display the image cheat sheet. 
+
+
+
+NB: If you want to recreate the case images, the image files must be removed
+from /usr/local/forge/Images, as ForGe refuses to overwrite existing images. 
+To purge deleted images from the database, go back to admin interface
+http://localhost:8000/admin/ui/image, select all deleted images, 
+choose "delete selected images" from the pull down menu and click go. A
+confirmation is required, showing the cascading deletions to other tables. 
+Accept and all traces of deleted images are gone.  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-----------------Generic quick start instructions----------------------
+
+
+
 ForGe currently supports NTFS and FAT file systems (file actions not yet
 supported in FAT).  Follow installation instructions (run the installation
 script and pre_populate database), and follow these steps to start using

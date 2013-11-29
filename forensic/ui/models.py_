@@ -113,7 +113,7 @@ class Case(models.Model):
     roottime = models.DateTimeField()
     weekvariance = models.IntegerField(default=0)
     garbage = models.BooleanField(default=False)
-    fsparam1 = models.IntegerField(blank=True, default=0)
+    fsparam1 = models.IntegerField(blank=True, default=0, verbose_name="Sectors per cluster")
     fsparam2 = models.IntegerField(blank=True, default=0)
     fsparam3 = models.IntegerField(blank=True, default=0)
     fsparam4 = models.IntegerField(blank=True, default=0)

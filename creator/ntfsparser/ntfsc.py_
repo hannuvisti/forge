@@ -295,7 +295,8 @@ class NTFSC(FileSystemC):
             
         #for f in self.f_mft:
         #    print >>sys.stderr,"*",f.get_file_name()
-        raise ForensicError("File not found FFBP")
+	emesg="File not found by path:"+name
+        raise ForensicError(emesg)
         
         
     def change_time(self,fname,btime):
