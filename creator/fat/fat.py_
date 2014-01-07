@@ -731,22 +731,23 @@ class FATC(FileSystemC):
             raise
 
     def implement_action(self,act):
-        return "Not implemented"
+
         fname = act[0]
         action = act[1]
         try:
-            m = self.find_file_by_path(fname)
-            stdtime = m.query_std_time()
+            m = self.find_file_by_path(fname).link
         except ForensicError:
             raise
         result=""
+
         try:
             actiontime = action["Read"]
-            btime = dict(atime=actiontime)
-            m.change_std_time(btime)
+            #btime = dict(atime=actiontime)
+            m.change_atime(actiontime)
             result += "File read %s" % actiontime      
         except KeyError:
             pass
+
         try:
             actiontime = action["Rename"]
             btime = {}
@@ -764,15 +765,26 @@ class FATC(FileSystemC):
             pass
         try:
             actiontime = action["Edit"]
-            btime = {}
-            btime["mtime"] = actiontime
-            btime["atime"] = actiontime
-            btime["etime"] = actiontime
-            m.change_std_time(btime)
+            m.change_atime(actiontime)
+            m.change_mtime(actiontime)
             result += "File edited %s" % actiontime
         except KeyError:
             pass
 
+        try:
+            actiontime = action["Copy"]
+            m.change_mtime(actiontime)
+            result += "File copied %s" % actiontime
+        except KeyError:
+            pass
+
+        try:
+            actiontime = action["Move"]
+            m.change_mtime(actiontime)
+            m.change_ctime(actiontime)
+            result += "File moved %s" % actiontime
+        except KeyError:
+            pass
 
 
 
