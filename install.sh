@@ -54,6 +54,8 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+mkdir -p $MOUNTDIR >/dev/null 2>&1
+
 # Copy directories
 echo "copy items"
 cp -r ./forensic $APPDIR
