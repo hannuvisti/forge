@@ -16,7 +16,7 @@ the University of Westminster. Its main features include:
 * Variance in timestamps. Each trivial and hidden file can be timestamped to a specific time. Each scenario is
   given a time variance parameter in weeks. If this is set to 0, every image receives an identical timeline. If
   nonzero, a random amount of weeks up to the maximum set is added to each file on each image
-* Can modify timestamps to simulate certain disk actions (move, copy, rename, delete). Disk actions currently available only for NTFS.
+* Can modify timestamps to simulate certain disk actions (move, copy, rename, delete). Not all actions are available for all file system types.
 * Implements several data hiding methods: Alternate data streams, extension change, file deletion, concatenation
   of files and file slack space. 
 * New data hiding methods can be easily implemented. Adding a new file system is also documented.
@@ -25,7 +25,7 @@ the University of Westminster. Its main features include:
 ## Components and requirements
 The application is built in Python and a helper application "chelper" in C. ForGe is guaranteed to work in the following environment but slight version deviations are not expected to cause problems. ForGe is written in Python 2.7 and does not support Python 3 syntax.
 
-* Ubuntu 64 bit 12.04
+* Ubuntu 64 bit 12.04 or Debian 7
 * Django 1.5.1
 * Python 2.7.3 - 2.7.5
 * Tuxera NTFS-3G 2013.1.13 (the default in Ubuntu 12.04 is an older version, which does weird things to attributes of deleted files)
