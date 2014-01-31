@@ -32,7 +32,7 @@ from ui.uitools import ForensicError
 
 HELPER = "/home/forensic/chelper"
 
-    
+"""    
 def NTFSCreateImage(name, size, garbage, clustersize=2048):
     #ntfs=NTFSC("/home/visti/Project/Images/image-ntfs")
     #ntfs.fs_init()
@@ -51,20 +51,17 @@ def NTFSCreateImage(name, size, garbage, clustersize=2048):
          
     __result = call([HELPER, "create", "ntfs", str(size), str(clustersize), __imagename, __fill, name], shell=False)
     return __result
-
-ntfs=NTFSC("/home/visti/Project/Images/testi-2", "/mnt/image")
+"""
+ntfs=NTFSC("/usr/local/forge/Images/casetest-2", "/mnt/image")
 ntfs.fs_init()
 
 try:
-    m = ntfs.find_file_by_path("/doc/neocv.doc")
-    m.mft_display()
-    dt = datetime.datetime(2005,2,4,12,32,42)
-    rt = datetime.datetime(2010,1,7,1,59,59)
-    ntfs.change_time("/doc/neocv.doc", dict(all=dt,etime=rt))
-    m.mft_display()
+    print ntfs.get_surface_status(0,10244)
+    print ntfs.get_surface_status(1100,10244)
+    ntfs.set_cluster_status(1101,1,True)
 
 except ForensicError:
-    pass
+    raise
 
 #ntfs.fs_display()
 #ntfs.fs_display()

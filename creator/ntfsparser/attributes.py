@@ -62,8 +62,7 @@ class _ResidentAttribute(object):
         buf += self.a_padding
         return buf
     def locate_data(self,offset):
-        print >>sys.stderr, "this should not happen"
-        return self.parent.m_location+offset
+        return self.parent.m_location+offset+self.a_offset
     def get_slack(self):
         return self.a_slack  
     def init_slack(self):
@@ -645,8 +644,31 @@ class _NTFSAttributeBitmap(_NTFSAttribute):
         bit = number - byte*8
         return (self.a_bitmap[byte] >> bit) & 1
 
+    def modify_bit(self,number, value, image_write=False):
+        if value < 0 or value > 1:
+            return False
+        byte = int(number/8)
+        bit = number - byte*8
+        
+        old_value = ord(self.a_bitmap[byte])
+        bloc = (2**bit)*value
+        new_value = struct.pack ("B",old_value | bloc)
+        
+        self.a_bitmap = self.a_bitmap[:byte]+new_value+self.a_bitmap[byte+1:]
+        if image_write:
+            self.parent.parent.write_location(self.a_location+byte, new_value)
+        
+
     def write_attribute(self):
         return
+        """ This write does not add anything. It modifies existing bytes only """
+        buf =  self.pack_header()
+        buf += self.a_content.pack_residency()
+        buf += self.a_bitmap
+        """ padded to 8 bytes """
+        buf += '\x00'* (self.a_length - len(buf))
+        
+        self.parent.parent.write_location(self.a_location,buf)
     
     def attribute_print(self):
         self.A_print_header()

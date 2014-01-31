@@ -195,6 +195,13 @@ class _MftEntry:
         attr = self.m_qdata[name]
         return attr.locate_data(offset)
   
+
+    def return_unnamed_data(self):
+        try:
+            return self.m_qdata[None]
+        except KeyError:
+            raise ForensicError("Cannot locate unnamed data attribute");
+
     def get_directory_structure(self):
         if self.m_flags & 3 != 3:
             return;

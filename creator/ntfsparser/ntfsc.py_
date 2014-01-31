@@ -19,6 +19,7 @@ import struct
 from mftentry import _MftEntry 
 from tools import _hexdump
 from subprocess import call
+from attributes import _NTFSAttributeBitmap
 import sys
 from ui.uitools import ForensicError
 
@@ -101,6 +102,7 @@ class NTFSC(FileSystemC):
     f_clustersize = 0
     f_indexbuffersize = 0
     f_mft = []
+
     
     def __init__(self,fname, mountpoint):
         self.f_mft = []
@@ -227,6 +229,8 @@ class NTFSC(FileSystemC):
             self.f_mft.append(mft_record) 
         #self.f_directory = DirectoryTree(self.f_mft)
         self._dir_structure()
+
+        self.f_bitmap = bit_data = self.f_mft[6].return_unnamed_data().read_data(-1,-1)
 
 
     def get_list_of_files(self,flags):
@@ -381,8 +385,43 @@ class NTFSC(FileSystemC):
             fh.close()
         except IOError:
             raise ForensicError("Cannot write to image")
+
+
+    def get_cluster_status(self,number):
+        byte = int(number/8)
+        bit = number - byte*8
+        b_tmp, = struct.unpack("B",self.f_bitmap[byte])
+        return (b_tmp >> bit) & 1
     
-            
+    def set_cluster_status(self,number, value, image_write=False):
+        if value < 0 or value > 1:
+            return False
+        byte = int(number/8)
+        bit = number - byte*8
+        
+        old_value = ord(self.f_bitmap[byte])
+        bloc = (2**bit)*value
+        new_value = struct.pack ("B",old_value | bloc)
+        
+        self.f_bitmap = self.f_bitmap[:byte]+new_value+self.f_bitmap[byte+1:]
+        if image_write:
+            wloc = self.f_mft[6].locate_data(None,byte)
+            self.write_location(wloc, new_value)
+
+    
+    def get_surface_status(self,candidate,datasize):
+        numofclusters = self.f_size / (self.f_clustersize / self.f_sectorsize)-1
+        required = int(datasize / self.f_clustersize) +1
+        if candidate < 0 or candidate > numofclusters-required-1:
+            print candidate,datasize,numofclusters,required
+            raise ForensicError("get_cluster_status: this should not happen")
+
+        all_free = True
+        for i in range(candidate,candidate+required):
+            if self.get_cluster_status(i) == 1:
+                all_free = False
+        return all_free
+
     def fs_finalise(self):
         pass
         try:
