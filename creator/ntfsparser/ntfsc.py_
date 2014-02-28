@@ -22,6 +22,7 @@ from subprocess import call
 from attributes import _NTFSAttributeBitmap
 import sys
 from ui.uitools import ForensicError
+from random import randint
 
 FLAG_SYSTEM = 0x1
 FLAG_DIRECTORY = 0x2
@@ -421,6 +422,24 @@ class NTFSC(FileSystemC):
             if self.get_cluster_status(i) == 1:
                 all_free = False
         return all_free
+
+    def locate_unallocated_space(self,datasize):
+        i=0
+        numofclusters = self.f_size / (self.f_clustersize / self.f_sectorsize) -1
+        required = int(datasize / self.f_clustersize) +1
+        while True:
+            y = randint(32,numofclusters-required)
+            if self.get_surface_status(y,datasize) == True:
+                return y*self.f_clustersize
+            i += 1
+            if i > 20:
+                break
+        """ do a sequential search """
+
+        for y in xrange(32,numofclusters-required):
+            if self.get_surface_status(y,datasize) == True:
+                return y*self.f_clustersize
+        return -1
 
     def fs_finalise(self):
         pass

@@ -103,6 +103,8 @@ def initDbView(request):
         h.save()
         h = HidingMethod(name="Not hidden", priority = 3, pythonpath="hiding.donothide", pythonhideclass="DoNotHideFile")
         h.save()
+        h = HidingMethod(name="Unallocated space", priority = 4, pythonpath="hiding.unallocated_space", pythonhideclass="UnallocatedSpace")
+        h.save()
         c=Case(name="casetest", owner=User.objects.get(name="forge"), date_created="2013-06-01", 
                size="10M", amount=3, garbage=False,fsparam1=8, weekvariance=26, filesystem= FileSystem.objects.get(name="NTFS"),
                roottime=datetime.datetime(2010,7,16,3,42,42))
