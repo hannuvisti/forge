@@ -31,6 +31,7 @@ PREFIX = "@@IMAGEDIR@@"
 MOUNTPOINT = "@@MOUNTPOINT@@"
 
 
+
 # Create your models here.
 class User(models.Model):
     ROLES = ((0,"Administrator"), (1,"Teacher"), (2,"Student"), (3,"Tester"))
@@ -136,7 +137,7 @@ class Case(models.Model):
         try:
             removed_chmod = os.chmod
             del os.chmod
-        except AtrributeError:
+        except AttributeError:
             removed_chmod = None
         for i in range(1,self.amount+1):
             if self.trivialstrategy_set.count() == 0:
