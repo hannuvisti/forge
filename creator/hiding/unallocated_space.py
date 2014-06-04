@@ -36,7 +36,7 @@ class UnallocatedSpace(HidingMethod):
         self.fs = filesystem
 
         
-    def hide_file(self, hfile, param = {}):
+    def hide_file(self, hfile, image, param = {}):
         mark_used = False
         try:
             if param["mark_used"] == "True":

@@ -39,7 +39,7 @@ class DoNotHideFile(HidingMethod):
         self.priorityflag = FLAG_FILESYSTEM
 
     
-    def hide_file(self, hfile, param = {}):
+    def hide_file(self, hfile, image, param = {}):
         hf = None
         dirs1 = self.fs.get_list_of_files(FLAG_DIRECTORY|FLAG_REGULAR)
         dirs2 = self.fs.get_list_of_files(FLAG_DIRECTORY|FLAG_SYSTEM)

@@ -38,11 +38,19 @@ class ConcatenateFile(HidingMethod):
         self.priorityflag = FLAG_FILESYSTEM
 
     
-    def hide_file(self, hfile, param = {}):
+    def hide_file(self, hfile, image, param = {}):
         files = self.fs.get_list_of_files(FLAG_REGULAR)
         hr = None
         try:
-            chosenfile = choice(files).filename
+            itr = 0
+            while True:
+                c = choice(files)
+                itr = itr + 1
+                if image.check_trivial_usage_status(c.filename) == False:
+                    break
+                if itr > 20:
+                    raise ForensicError("Cannot find unused trivial files")
+            chosenfile = c.filename
         except IndexError:
             errlog("No files to target")
             raise ForensicError("no files to target")

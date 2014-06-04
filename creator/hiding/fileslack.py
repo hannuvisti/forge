@@ -34,7 +34,7 @@ class FileSlack(HidingMethod):
         self.fs = filesystem
 
         
-    def hide_file(self, hfile, param = {}):
+    def hide_file(self, hfile, image, param = {}):
         slack = self.fs.get_file_slack()
         hf = ""
         if slack == None:

@@ -39,7 +39,7 @@ class ExtensionChange(HidingMethod):
         self.fs = filesystem
 
 
-    def hide_file(self, hfile, param = {}):
+    def hide_file(self, hfile, image, param = {}):
         extensions = ["jpg", "com", "zip", "xlsx", "doc", "xls", "exe", "dll", "pdf", "rar"]
         hf = None
         dirs1 = self.fs.get_list_of_files(FLAG_DIRECTORY|FLAG_REGULAR)

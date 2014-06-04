@@ -73,7 +73,7 @@ class TrivialStrategyAdmin(admin.ModelAdmin):
     list_display=("case", "type", "exact", "quantity", "path", "dirtime")
 
 class TrivialObjectAdmin(admin.ModelAdmin):
-    list_display=("image", "file", "path")
+    list_display=("image", "file", "inuse", "path")
     
 class SecretStrategyAdmin(admin.ModelAdmin):
     list_display = ("case", "method", "group", "filetime", "action", "actiontime", "instruction")

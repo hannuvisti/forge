@@ -31,7 +31,6 @@ PREFIX = "@@IMAGEDIR@@"
 MOUNTPOINT = "@@MOUNTPOINT@@"
 
 
-
 # Create your models here.
 class User(models.Model):
     ROLES = ((0,"Administrator"), (1,"Teacher"), (2,"Student"), (3,"Tester"))
@@ -399,7 +398,7 @@ class Image(models.Model):
             path = f.file.path
             try:
                 shutil.copy(path,strategypath)
-                tro = TrivialObject(image=self,file=f,path=strategy.path+"/"+f.name)
+                tro = TrivialObject(image=self,file=f,path=strategy.path+"/"+f.name, inuse=False)
                 tro.save()
                 b = path.rsplit("/",1)[1]
                 time_command_list.append([strategy.path+"/"+b,inittime])
@@ -407,7 +406,6 @@ class Image(models.Model):
 
                 inittime = inittime+filedelta
             except IOError:
-                raise
                 raise ForensicError("IO error / out of space")        
         return time_command_list
     
@@ -448,11 +446,17 @@ class Image(models.Model):
             
         retv = None
         try:
-            result = ssclass.hide_file(hfile.file, strategy.process_parameters())
+            result = ssclass.hide_file(hfile.file, self, strategy.process_parameters())
             if result:
                 ho = HiddenObject(image=self,file=hfile,method=hiding_method, location=result["instruction"])
                 ho.save()
                 retv = {}
+                try:
+                    trivial_file_path = result["path"]
+                    self.mark_trivial_file_used(trivial_file_path)
+                except KeyError:
+                    pass
+                    
                 try:
                     retv["todelete"] = result["todelete"]
                 except KeyError:
@@ -489,19 +493,52 @@ class Image(models.Model):
         return retv
         #    uitools.errlog("Not hidden, no candidate files")
             
-        
+    def find_trivial_files_by_ext(self, extensions):
+        trivial_objects = TrivialObject.objects.filter(image = self)
+        cset = []
+        for t in trivial_objects:
+            if t.is_of_type(extensions) == True:
+                cset.append(t.path)
+        return cset
+
+    def mark_trivial_file_used(self, path):
+        trivial_objects = TrivialObject.objects.filter(image = self)
+        for t in trivial_objects:
+            if t.path == path:
+                t.inuse = True
+                t.save()
+                return
+        raise ForensicError("Unable to mark %s used" % path)
+
+    def check_trivial_usage_status(self, tpath):
+        tfile = TrivialObject.objects.filter(image=self, path = tpath)[0]
+        return tfile.inuse
     
 class TrivialObject(models.Model):
     image = models.ForeignKey(Image)
     file = models.ForeignKey(TrivialFileItem)
     path = models.CharField(max_length=256)
+    inuse = models.BooleanField(default=False)
+
     class Meta:
         unique_together = ("image", "path")
     
     def __unicode__(self):
         return self.path
 
-
+    def is_of_type(self, reqtype):
+        if type(reqtype) is not list:
+            raise ForensicError("request type must be a list")
+        try:
+            filename = self.file.name
+            extension = filename.rsplit(".",1)[1]
+        except IndexError:
+            return False
+        if extension in reqtype:
+            return True
+        else:
+            return False
+        
 class HiddenObject(models.Model):
     ACTIONS=((0,"None"), (1,"Copy"),(2,"Move"),(3,"Rename"), (4,"Read"), (5,"Edit"))
     image = models.ForeignKey(Image)

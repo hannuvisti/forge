@@ -47,7 +47,7 @@ class AlternateDataStream(HidingMethod):
         self.fs = filesystem
 
 
-    def hide_file(self,hfile,param = {}):
+    def hide_file(self,hfile,image,param = {}):
         if self.fs.fs_fstype != "ntfs":
             raise ForensicError("Alternate data streams work only on NTFS")
         files = self.fs.get_list_of_files(FLAG_REGULAR)
@@ -60,7 +60,14 @@ class AlternateDataStream(HidingMethod):
         except KeyError:
             pass
         try:
-            c = choice(files)
+            itr = 0
+            while True:
+                c = choice(files)
+                itr = itr + 1
+                if image.check_trivial_usage_status(c.filename) == False:
+                    break
+                if itr > 20:
+                    raise ForensicError("Cannot find unused trivial files")
         except IndexError:
             raise ForensicError("No regular files for ADS")
         targetfile = self.fs.fs_mountpoint + c.filename + ":" + stream_name
