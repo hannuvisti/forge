@@ -30,7 +30,6 @@ import importlib
 PREFIX = "@@IMAGEDIR@@"
 MOUNTPOINT = "@@MOUNTPOINT@@"
 
-
 # Create your models here.
 class User(models.Model):
     ROLES = ((0,"Administrator"), (1,"Teacher"), (2,"Student"), (3,"Tester"))
@@ -483,6 +482,7 @@ class Image(models.Model):
                         pass
                 
             else:
+                print result
                 raise ForensicError("Unable to hide")
                                     
                     
