@@ -482,8 +482,7 @@ class Image(models.Model):
                         pass
                 
             else:
-                print result
-                raise ForensicError("Unable to hide")
+                raise ForensicError("hiding method resulted nothing. Unable to hide")
                                     
                     
         except ForensicError as fe:
