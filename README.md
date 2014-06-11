@@ -1,7 +1,16 @@
 # ForGe
 
-Forensic test image generator v1.9.1
+Forensic test image generator v2.0
 Copyright Hannu Visti 2013-2014, licenced under Gnu General Public Licence
+
+## Version upgrade note
+
+ForGe 2.0 includes changes to database scheme. It is advisable to drop the current database and follow installation instructions in Doc/Installation.txt to create a new database schema and populate it with initial data. 
+
+Changes: 
+* TrivialObject table now has a boolean field inuse to flag a trivial file on image already used as a cover file.
+* Hiding method functions now take image as a parameter. This allows database queries and updates from hiding methods modules through Image table/class methods. 
+* Added Steganography hiding method using steghide application. Steghide is not part of ForGe but must be installed separately if used (sudo apt-get install steghide).
 
 ## Overview
 
