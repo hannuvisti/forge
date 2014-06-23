@@ -27,6 +27,8 @@ from random import randint
 FLAG_SYSTEM = 0x1
 FLAG_DIRECTORY = 0x2
 FLAG_REGULAR = 0x4
+
+#HELPER = "/usr/local/forge/chelper/chelper"
 HELPER = "@@CHELPER@@"
 
 def NTFSCreateImage(name, size, garbage, clustersize=4):
@@ -44,7 +46,8 @@ def NTFSCreateImage(name, size, garbage, clustersize=4):
     else:
         fill = "clean"
          
-    result = call([HELPER, "create", "ntfs", str(size), str(clustersize), imagename, fill, name], shell=False)
+    result = call([HELPER, "create", "ntfs", str(size), str(clustersize), imagename, 
+                   fill, name], shell=False)
     return result
 
 
@@ -446,7 +449,9 @@ class NTFSC(FileSystemC):
         try:
             rmft = self.f_mft[0].mft_data(None,1024*5,1024)
             wloc = self.f_clustersize * self.f_mft2 + 1024*5
-            self.write_location(wloc, rmft)
+            """ $MftMirr has root directory entry if cluster size over 4096. """
+            if self.f_clustersize > 4096:
+                self.write_location(wloc, rmft)
         except ForensicError:
             raise ForensicError("Unable to fix $MftMirr")
             
