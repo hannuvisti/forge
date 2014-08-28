@@ -27,6 +27,8 @@ int check_existence(char *path, int exitflag) {
 int process_lxc(int argc, char **argv) {
   int i=2;
 
+  setresuid(0,0,0);
+
   check_existence(LXC_CREATE,1);
   check_existence(LXC_DESTROY,1);
   check_existence(LXC_START,1);
