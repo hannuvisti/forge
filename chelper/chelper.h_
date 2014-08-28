@@ -7,12 +7,19 @@
 #define MKFS_FAT "/sbin/mkfs.msdos"
 #define MOUNT_FAT "/bin/mount"
 
+#define LXC_CREATE "/usr/bin/lxc-create"
+#define LXC_DESTROY "/usr/bin/lxc-destroy"
+#define LXC_STOP "/usr/bin/lxc-stop"
+#define LXC_START "/usr/bin/lxc-start"
+#define LXC_ATTACH "/usr/bin/lxc-attach"
 
 /* Path for ready images */
-#define PATH "@@IMAGEDIR@@/"
+#define PATH "@@IMAGEDIR@@/" 
+/* #define PATH "/usr/loca/forge/images/" */
 
 /* Path where images in process are temporarily mounted */
 #define MOUNTPOINT "@@MOUNTPOINT@@"
+/* #define MOUNTPOINT "/tmp/image" */
 
 #define MAX_PATH_LENGTH 256
 
@@ -20,3 +27,5 @@
 #define C_ZERO 0
 
 
+int check_existence(char*, int);
+int process_lxc(int, char**);
