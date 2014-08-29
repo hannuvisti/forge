@@ -52,6 +52,8 @@ NTFS parser component can be of interest to other file system related projects. 
 ## Documentation
 A simple manual and extension design notes can be found in Documentation. A quick start guide explains the image creation basics. 
 
+## Future work
+I have started work on web history and cache creation. This is still in early stages but I hope something usable comes out of it. 
 
 ### Author and contact details
 Hannu Visti
