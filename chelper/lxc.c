@@ -72,8 +72,9 @@ int lxc_create() {
   pid_t pid;
   int devnull;
   
-  char *arg1[] = {LXC_CREATE,"-t", "ubuntu", "-n", LXC_NAME,"--","-u",LXC_USER, NULL};
+  char *arg1[] = {LXC_CREATE,"-t", "ubuntu", "-n", LXC_NAME,"--","-u",LXC_USER, "--packages", "firefox,python2.7,xvfb,python-pip", NULL};
   char *arg2[] = {LXC_START,"-d", "-n", LXC_NAME, NULL};
+  char *arg3[] = {LXC_ATTACH, "-n", LXC_NAME, "--", "pip", "install", "selenium", NULL};
 
   pid = fork();
   if (pid == -1) {
@@ -130,6 +131,32 @@ int lxc_create() {
   }	 
   if (result != 0) {
     fprintf(stderr,"container startup failed\n");
+    exit(1);
+  }
+  sleep(5);
+  /* install selenium if successful */
+  pid = fork();
+  if (pid == -1) {
+    perror(PNAME);
+    exit(1);
+  }
+  if (pid == 0) {
+    /* 
+       No output required or wanted
+    */
+    close(STDERR_FILENO);
+    close(STDOUT_FILENO); 
+    if (execv(LXC_ATTACH, arg3) == -1) {
+      perror(PNAME);
+      exit(1);
+    }
+    /* This is never reached */
+  }
+  else {
+    wait (&result);
+  }	 
+  if (result != 0) {
+    fprintf(stderr,"selenium install failed\n");
     exit(1);
   }
 
