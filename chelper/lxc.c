@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include <sys/mount.h>
+#include <string.h>
 
 #include "chelper.h"
 
@@ -60,6 +61,8 @@ int process_lxc(int argc, char **argv) {
     }
     exit(lxc_attach(argc,argv));
   }
+  if (strcmp(argv[2],"process_webdrive") == 0) 
+    exit(process_webdriver());
 
   fprintf(stderr,"unrecognised lxc command\n");
   exit(42);
@@ -68,13 +71,13 @@ int process_lxc(int argc, char **argv) {
 /* creates and starts the container */
 int lxc_create() {
 
-  int result=0;
+  int result=0,counter=0;
   pid_t pid;
   int devnull;
   
   char *arg1[] = {LXC_CREATE,"-t", "ubuntu", "-n", LXC_NAME,"--","-u",LXC_USER, "--packages", "firefox,python2.7,xvfb,python-pip", NULL};
   char *arg2[] = {LXC_START,"-d", "-n", LXC_NAME, NULL};
-  char *arg3[] = {LXC_ATTACH, "-n", LXC_NAME, "--", "pip", "install", "selenium", NULL};
+  char *arg3[] = {LXC_ATTACH, "-n", LXC_NAME, "--", "pip", "install", "-U", "--force-reinstall", "selenium", NULL};
 
   pid = fork();
   if (pid == -1) {
@@ -133,33 +136,43 @@ int lxc_create() {
     fprintf(stderr,"container startup failed\n");
     exit(1);
   }
-  sleep(5);
+
   /* install selenium if successful */
-  pid = fork();
-  if (pid == -1) {
-    perror(PNAME);
-    exit(1);
-  }
-  if (pid == 0) {
-    /* 
-       No output required or wanted
-    */
-    close(STDERR_FILENO);
-    close(STDOUT_FILENO); 
-    if (execv(LXC_ATTACH, arg3) == -1) {
+
+  while (1==1) {
+    pid = fork();
+    if (pid == -1) {
       perror(PNAME);
       exit(1);
     }
-    /* This is never reached */
-  }
-  else {
-    wait (&result);
-  }	 
-  if (result != 0) {
+    if (pid == 0) {
+      /* 
+	 No output required or wanted
+      */
+      close(STDERR_FILENO);
+      close(STDOUT_FILENO); 
+      if (execv(LXC_ATTACH, arg3) == -1) {
+	perror(PNAME);
+	exit(1);
+      }
+      /* This is never reached */
+    }
+    else {
+      wait (&result);
+    }	 
+    if (result == 0) 
+      break;
+    counter++;
+    if (counter < 10) {
+      sleep(2);
+      continue;
+    }
     fprintf(stderr,"selenium install failed\n");
     exit(1);
   }
 
+  /* Hack selenium to not delete cache and history */
+  process_webdriver();
   exit(0);
 }
 
@@ -345,3 +358,90 @@ int lxc_attach(int argc, char **argv) {
   }	 
   exit(0);
 }  
+
+int process_webdriver() {
+  FILE *fp;
+  long fsize;
+  char *fco, *newfile, *c;
+  int devnull, result;
+  pid_t pid;
+
+  fp = fopen(WEBDRIVER_REMOTE,"r");
+  if (fp == NULL) {
+    perror(PNAME);
+    exit(1);
+  }
+  fseek(fp,0,SEEK_END);
+  fsize = ftell(fp);
+  fseek(fp,0,SEEK_SET);
+
+  fco = malloc(sizeof(char)*(fsize+1));
+  if (fco == NULL) {
+    perror (PNAME);
+    exit(1);
+  }
+  fread (fco, fsize, 1, fp);
+  fclose(fp);
+  fco[fsize] = 0;
+
+  newfile = malloc(sizeof(char)*(fsize+120));
+  if (newfile == NULL) {
+    perror(PNAME);
+    exit(1);
+  }
+  c = strstr(fco, "self.binary.kill()");
+  if (c == NULL) {
+    fprintf(stderr, "self.binary.kill() not found in webdriver\n");
+    exit(1);
+  }
+  bzero(newfile, fsize+119);
+  memcpy(newfile, fco, c-fco);
+  strcat(newfile, "self.binary.kill()\n        return self.profile.path\n");
+  strcat(newfile, c+18);
+
+  fp = fopen(WEBDRIVER_REMOTE, "w");
+  if (fp == NULL) {
+    perror(PNAME);
+    exit(1);
+  }
+  fputs(newfile, fp);
+  fclose(fp);
+
+
+  /* Compile to pyc */
+  char *arg[] = {LXC_ATTACH, "-n", LXC_NAME, "--", PYTHON, "-m", "compileall", WEBDRIVER_LOCAL_DIR, NULL};
+  pid = fork();
+  if (pid == -1) {
+    perror(PNAME);
+    exit(1);
+  }
+  if (pid == 0) {
+    /* 
+       No output required or wanted
+    */
+    devnull = open("/dev/null", O_RDWR);
+    if (devnull == -1) {
+      perror(PNAME);
+      exit(1);
+    }
+    dup2(devnull,1);
+    dup2(devnull,2);
+    close(devnull);
+
+    if (execv(LXC_ATTACH, arg) == -1) {
+      perror(PNAME);
+      exit(1);
+    }
+    /* This is never reached */
+  }
+  else {
+    wait (&result);
+  }	 
+  if (result != 0) {
+    fprintf(stderr,"python compile failed\n");
+    exit(1);
+  }
+
+
+  return(0);
+}

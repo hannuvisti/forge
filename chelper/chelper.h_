@@ -12,14 +12,21 @@
 #define LXC_STOP "/usr/bin/lxc-stop"
 #define LXC_START "/usr/bin/lxc-start"
 #define LXC_ATTACH "/usr/bin/lxc-attach"
+#define PYTHON "/usr/bin/python"
 
 /* Path for ready images */
-#define PATH "@@IMAGEDIR@@/" 
-/* #define PATH "/usr/loca/forge/images/" /*
+#define PATH "@@IMAGEDIR@@/"
+/* #define PATH "/usr/local/forge/images/" */
 
 /* Path where images in process are temporarily mounted */
-#define MOUNTPOINT "@@MOUNTPOINT@@"
+#define MOUNTPOINT "@@MOUNTPOINT@@" 
 /* #define MOUNTPOINT "/tmp/image" */
+
+/* This points to webdriver.py inside the container */
+#define WEBDRIVER_REMOTE "/var/lib/lxc/forge-lxc/rootfs/usr/local/lib/python2.7/dist-packages/selenium/webdriver/firefox/webdriver.py"
+#define WEBDRIVER_LOCAL_DIR "/usr/local/lib/python2.7/dist-packages/selenium/webdriver/firefox"
+
+
 
 #define MAX_PATH_LENGTH 256
 
@@ -35,3 +42,4 @@ int lxc_create(void);
 int lxc_destroy(int);
 int lxc_stop(void);
 int lxc_attach(int,char**);
+int process_webdriver(void);
