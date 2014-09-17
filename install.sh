@@ -28,10 +28,10 @@ if [ ! -d "$LXCDIR" ]; then
     exit 1
 fi
 
-#if [ -d "$APPDIR" ]; then
-#    echo "application directory exists, no modifications done"
-#    exit 1
-#fi
+if [ -d "$APPDIR" ]; then
+    echo "application directory exists, no modifications done"
+    exit 1
+fi
 
 echo $1
 if [ ! "$1" = "OK" ]; then
