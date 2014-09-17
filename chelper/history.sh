@@ -12,11 +12,12 @@ CHELPER=/usr/local/forge/chelper/chelper
 $CHELPER lxc lxc-destroy
 $CHELPER lxc lxc-create
 sleep 5
-$CHELPER lxc lxc-attach wait apt-get install -y xvfb
-$CHELPER lxc lxc-attach wait apt-get install -y firefox
 
+$CHELPER lxc process_webdrive
+$CHELPER lxc lxc-start
+sleep 10
 
-$CHELPER lxc lxc-attach nowait Xvfb :1 -screen 0 1024x768x24
+$CHELPER lxc lxc-attach nowait Xvfb :0 -screen 0 1024x768x24
 sleep 1
 $CHELPER lxc lxc-attach nowait su - forge -c "firefox --display=:1 http://news.bbc.co.uk"
 sleep 1

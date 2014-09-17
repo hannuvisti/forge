@@ -138,7 +138,7 @@ int lxc_create() {
   }
 
   /* install selenium if successful */
-
+  sleep(5);
   while (1==1) {
     pid = fork();
     if (pid == -1) {
@@ -148,9 +148,9 @@ int lxc_create() {
     if (pid == 0) {
       /* 
 	 No output required or wanted
-      */
+
       close(STDERR_FILENO);
-      close(STDOUT_FILENO); 
+      close(STDOUT_FILENO); */
       if (execv(LXC_ATTACH, arg3) == -1) {
 	perror(PNAME);
 	exit(1);

@@ -14,6 +14,8 @@ SECRETREP=$REPOSITORY/secretrepository
 DATABASE=$APPDIR/forensic/sqlite.db
 CREATORDIR=$APPDIR/creator
 IMAGEDIR=$APPDIR/Images
+LXCDIR=/usr/share/lxc/templates
+LXCCACHE=/var/cache/lxc/trusty
 
 # Mandatory requirements
 if [ `id -u` -ne 0 ]; then
@@ -21,10 +23,33 @@ if [ `id -u` -ne 0 ]; then
     exit 1
 fi
 
-if [ -d "$APPDIR" ]; then
-    echo "application directory exists, no modifications done"
+if [ ! -d "$LXCDIR" ]; then
+    echo "LXC is not installed. Install it first with apt-get instal lxc"
     exit 1
 fi
+
+#if [ -d "$APPDIR" ]; then
+#    echo "application directory exists, no modifications done"
+#    exit 1
+#fi
+
+echo $1
+if [ ! "$1" = "OK" ]; then
+    echo "This installation tool modifies LXC trusty server default"
+    echo "configuration /usr/share/lxc/templates/lxc-ubuntu"
+    echo "Old configuration is backed up to lxc-ubuntu.old"
+    echo ""
+    echo "This also removes lxc ubuntu cache $LXCCACHE"
+    echo "It will be recreated upon the first container creation, which"
+    echo "will take longer time. This is done to speed up consecutive"
+    echo "container creations, by adding needed modules to the template"
+    echo ""
+    echo "To agree to this, please run install.sh with parameter OK"
+    echo "for example ./install.sh OK"
+    exit 1
+fi
+
+
 
 # Create directories
 echo "create directories"
@@ -99,6 +124,23 @@ rm chelper.h_
 
 cd $APPDIR
 chown -R $USERNAME creator forensic Images repository
+
+
+echo "processing lxc configuration"
+if [ -e "$LXCDIR/lxc-ubuntu.old" ]; then
+    TARGETB=/tmp/lxc-ubuntu.old
+else
+    TARGETB=$LXCDIR/lxc-ubuntu.old
+fi
+
+mv $LXCDIR/lxc-ubuntu $TARGETB
+cat $TARGETB | sed s/ssh,vim/ssh,vim,firefox,python2.7,xvfb,python-pip/ > $LXCDIR/lxc-ubuntu
+chmod 755 $LXCDIR/lxc-ubuntu
+
+if [ -d "$LXCCACHE" ]; then
+    rm -rf $LXCCACHE
+fi
+
 
 
 echo "all done. Now exit root, change to $APPDIR/forensic"
