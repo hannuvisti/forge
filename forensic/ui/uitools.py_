@@ -1,5 +1,5 @@
 '''
-Copyright 2013 Hannu Visti
+Copyright 2013-2014 Hannu Visti
 
 This file is part of ForGe forensic test image generator.
 ForGe is distributed in the hope that it will be useful,
@@ -16,7 +16,9 @@ import sys
 
 HELPER = "@@CHELPER@@"
 
+WDEST = "/var/lib/lxc/forge-lxc/rootfs/tmp/wh.py"
 
+WSRC = "/usr/local/forge/creator/browserhistory/webhistory.py"
 
 def errlog(message):
     print >>sys.stderr, message
@@ -26,3 +28,9 @@ class ForensicError(Exception):
         self.value = value
     def __str__(self):
         return repr(self.value)
+
+class Chelper(object):
+    def __init__(self):
+        self.binary = HELPER
+        self.wdest = WDEST
+        self.wsrc = WSRC

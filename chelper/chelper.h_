@@ -26,6 +26,8 @@
 #define WEBDRIVER_REMOTE "/var/lib/lxc/forge-lxc/rootfs/usr/local/lib/python2.7/dist-packages/selenium/webdriver/firefox/webdriver.py"
 #define WEBDRIVER_LOCAL_DIR "/usr/local/lib/python2.7/dist-packages/selenium/webdriver/firefox"
 
+/* This is the tmp file in the container */
+#define CONTAINER_TMP "/var/lib/lxc/forge-lxc/rootfs/tmp/wh.py"
 
 
 #define MAX_PATH_LENGTH 256
@@ -43,3 +45,4 @@ int lxc_destroy(int);
 int lxc_stop(void);
 int lxc_attach(int,char**);
 int process_webdriver(void);
+int copy_file(char*);

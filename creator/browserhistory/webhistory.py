@@ -78,16 +78,11 @@ class BrowserClass(object):
 
 
 b = BrowserClass()
-#
-#
-
-b.do_google_search("Hannu Visti",1)
-sleep(2)
-#b.do_google_search("Enver Hoxha")
-#sleep(2)
-#b.open_page("http://www.westminster.ac.uk")
-#sleep(2)
-b.close()
+sleep(3)
 #
 #
 # Inject your code here and finish by calling b.close()
+b.do_google_search("Hannu Visti",1)
+sleep(2)
+b.close()
+

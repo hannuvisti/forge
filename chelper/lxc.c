@@ -64,6 +64,14 @@ int process_lxc(int argc, char **argv) {
   if (strcmp(argv[2],"process_webdrive") == 0) 
     exit(process_webdriver());
 
+  if (strcmp(argv[2],"copy_file") == 0) {
+    if (argc < 3) {
+      fprintf(stderr,"usage: chelper lxc copy_file srcfile");
+      exit(1);
+    }
+    exit(copy_file(argv[3]));
+  }
+
   fprintf(stderr,"unrecognised lxc command\n");
   exit(42);
 }
@@ -75,9 +83,10 @@ int lxc_create() {
   pid_t pid;
   int devnull;
   
-  char *arg1[] = {LXC_CREATE,"-t", "ubuntu", "-n", LXC_NAME,"--","-u",LXC_USER, "--packages", "firefox,python2.7,xvfb,python-pip", NULL};
+  /*  char *arg1[] = {LXC_CREATE,"-t", "ubuntu", "-n", LXC_NAME,"--","-u",LXC_USER, "--packages", "firefox,python2.7,xvfb,python-pip", NULL}; */
+  char *arg1[] = {LXC_CREATE,"-t", "ubuntu", "-n", LXC_NAME,"--","-u",LXC_USER, NULL};
   char *arg2[] = {LXC_START,"-d", "-n", LXC_NAME, NULL};
-  char *arg3[] = {LXC_ATTACH, "-n", LXC_NAME, "--", "pip", "install", "-U", "--force-reinstall", "selenium", NULL};
+  char *arg3[] = {LXC_ATTACH, "-n", LXC_NAME, "--", "pip", "install", "-q", "-U", "--force-reinstall", "selenium", NULL};
 
   pid = fork();
   if (pid == -1) {
@@ -148,9 +157,9 @@ int lxc_create() {
     if (pid == 0) {
       /* 
 	 No output required or wanted
-
+      */
       close(STDERR_FILENO);
-      close(STDOUT_FILENO); */
+      close(STDOUT_FILENO); 
       if (execv(LXC_ATTACH, arg3) == -1) {
 	perror(PNAME);
 	exit(1);
@@ -445,3 +454,40 @@ int process_webdriver() {
 
   return(0);
 }
+
+int copy_file(char *src) {
+  int f_in, f_out;
+  char buf[1024];
+  ssize_t nread;
+
+  f_in = open(src, O_RDONLY);
+  if (f_in < 0) {
+    perror(PNAME);
+    exit(1);
+  }
+  f_out = open(CONTAINER_TMP, O_WRONLY | O_CREAT | O_EXCL, 0777);
+  if (f_out < 0) {
+    perror(PNAME);
+    exit(1);
+  }
+
+  while (nread = read(f_in, buf, sizeof(buf)), nread > 0) {
+      char *out_b = buf;
+      ssize_t nwritten;
+
+      do {
+	nwritten = write(f_out, out_b, nread);
+	if (nwritten >= 0) {
+	  nread -= nwritten;
+	  out_b += nwritten;
+	} 
+	else {
+	  fprintf(stderr, "file copy error\n");
+	  exit(1);
+	}
+      } while (nread > 0);
+    }
+    close(f_in);
+    close(f_out);
+    return(0);
+}            
