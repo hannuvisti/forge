@@ -30,6 +30,7 @@ import datetime
 class CaseAdminForm(ModelForm):
     class Meta:
         model = Case
+	fields = '__all__'
         
     def __init__(self, *args, **kwargs):
         try:

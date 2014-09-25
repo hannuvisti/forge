@@ -35,7 +35,7 @@ the University of Westminster. Its main features include:
 The application is built in Python and a helper application "chelper" in C. ForGe is guaranteed to work in the following environment but slight version deviations are not expected to cause problems. ForGe is written in Python 2.7 and does not support Python 3 syntax.
 
 * Ubuntu 64 bit 12.04 or newer (tested in 14.04), or Debian 7. 
-* Django 1.5.1 or newer
+* Django 1.5.1 or newer. Should work on Django 1.7
 * Python 2.7.3 -      Currently does not support Python 3
 * Tuxera NTFS-3G 2013.1.13 or newer (the default in Ubuntu 12.04 is an older version, which does weird things to attributes of deleted files)
 
