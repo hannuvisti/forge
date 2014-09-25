@@ -117,28 +117,37 @@ echo "creating chelper"
 cat $CHELPERDIR/chelper.h_ | sed s#@@IMAGEDIR@@#$IMAGEDIR# | sed s#@@MOUNTPOINT@@#$MOUNTDIR# > $CHELPERDIR/chelper.h
 cd $CHELPERDIR
 make && chmod 4711 chelper
-rm Makefile
-rm chelper.h
-rm chelper.c
-rm chelper.h_
+if [ ! "$2" = "CODE" ]; then
+	rm Makefile
+	rm chelper.h
+	rm chelper.c
+	rm chelper.h_
+	rm lxc.c
+fi
 
 cd $APPDIR
 chown -R $USERNAME creator forensic Images repository
 
 
 echo "processing lxc configuration"
-if [ -e "$LXCDIR/lxc-ubuntu.old" ]; then
-    TARGETB=/tmp/lxc-ubuntu.old
+/bin/grep firefox $LXCDIR/lxc-ubuntu >/dev/null
+rvalue=$?
+if [ $rvalue -eq 0 ]; then
+    echo "lxc already processed"
 else
-    TARGETB=$LXCDIR/lxc-ubuntu.old
-fi
+    if [ -e "$LXCDIR/lxc-ubuntu.old" ]; then
+	TARGETB=/tmp/lxc-ubuntu.old
+    else
+	TARGETB=$LXCDIR/lxc-ubuntu.old
+    fi
 
-mv $LXCDIR/lxc-ubuntu $TARGETB
-cat $TARGETB | sed s/ssh,vim/ssh,vim,firefox,python2.7,xvfb,python-pip/ > $LXCDIR/lxc-ubuntu
-chmod 755 $LXCDIR/lxc-ubuntu
+    mv $LXCDIR/lxc-ubuntu $TARGETB
+    cat $TARGETB | sed s/ssh,vim/ssh,vim,firefox,python2.7,xvfb,python-pip/ > $LXCDIR/lxc-ubuntu
+    chmod 755 $LXCDIR/lxc-ubuntu
 
-if [ -d "$LXCCACHE" ]; then
-    rm -rf $LXCCACHE
+    if [ -d "$LXCCACHE" ]; then
+	rm -rf $LXCCACHE
+    fi
 fi
 
 
