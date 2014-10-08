@@ -55,8 +55,8 @@ int process_lxc(int argc, char **argv) {
     exit (lxc_start());
   }
   if (strcmp(argv[2],"lxc-attach") == 0) {
-    if (argc < 4) {
-      fprintf(stderr, "usage: chelper lxc lxc-attach wait|nowait command\n");
+    if (argc < 5) {
+      fprintf(stderr, "usage: chelper lxc lxc-attach wait|nowait vocal|silent command\n");
       exit(1);
     }
     exit(lxc_attach(argc,argv));
@@ -309,7 +309,7 @@ int lxc_start() {
    flag 1: do wait for completion */
 
 int lxc_attach(int argc, char **argv) {
-  int result=0,i,flag=-1;
+  int result=0,i,flag=-1,silentflag=-1;
   pid_t pid,newpid;
   int devnull;
   char **arg1;
@@ -323,28 +323,37 @@ int lxc_attach(int argc, char **argv) {
     exit(1);
   }
 
+  if (strcmp(argv[4],"silent") == 0)
+    silentflag = 1;
+  if (strcmp(argv[4],"vocal") == 0)
+    silentflag = 0;
+  if (silentflag == -1) {
+    fprintf(stderr,"you must define silent/vocal");
+    exit(1);
+  }
   arg1 = malloc(sizeof(char*) * (argc+1));
   arg1[0] = LXC_ATTACH;
   arg1[1] = "-n";
   arg1[2] = LXC_NAME;
   arg1[3] = "--";
     
-  for (i=4;i < argc;i++) {
-    arg1[i] = argv[i];
+  for (i=5;i < argc;i++) {
+    arg1[i-1] = argv[i];
   }
-  arg1[argc+1] = NULL;
+  arg1[argc] = NULL;
 
-  
-  devnull = open("/dev/null", O_RDWR);
-  if (devnull == -1) {
-    perror(PNAME);
-    exit(1);
+  if (silentflag == 1) {
+    devnull = open("/dev/null", O_RDWR);
+    if (devnull == -1) {
+      perror(PNAME);
+      exit(1);
+    }
+
+    dup2(devnull,1);
+    dup2(devnull,2);
+    
+    close(devnull);
   }
-
-  dup2(devnull,1);
-  dup2(devnull,2);
-
-  close(devnull);
 
   pid = fork();
   if (pid == -1) {

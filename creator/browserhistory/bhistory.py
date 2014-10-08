@@ -22,7 +22,7 @@ from subprocess import check_output
 from subprocess import CalledProcessError
 from shutil import copyfile
 from traceback import format_exc
-
+from time import sleep
 import os
 import sys
 
@@ -49,6 +49,15 @@ class BrowserHistory(object):
                            shell=False)
             a=check_output([self.chelper.binary, "lxc", "process_webdrive"], 
                            shell=False)
+            sleep (3)
+            a=check_output([self.chelper.binary, "lxc", "lxc-attach", "nowait", "silent",
+                            "Xvfb", ":0", "-screen", "0", "1024x768x24"], 
+                           shell=False)
+            sleep (3)
+        except CalledProcessError as e:
+            print e
+            raise ForensicError("exec_file")
+
         except CalledProcessError as e:
             print e
             raise ForensicError("prepare_container")
@@ -76,20 +85,12 @@ class BrowserHistory(object):
             raise ForensicError("send_file")
 
     def exec_file(self):
-        try:
-            a=check_output([self.chelper.binary, "lxc", "lxc-attach", "nowait",
-                            "Xvfb", ":0", "-screen", "0", "1024x768x24"], 
-                           shell=False)
-        except CalledProcessError as e:
-            print e
-            raise ForensicError("exec_file")
-
 
         try:
-            b = check_output([self.chelper.binary,"lxc", "lxc-attach", "wait",
+            b = check_output([self.chelper.binary,"lxc", "lxc-attach", "wait", "vocal",
                               "su", "-", "forge", "-c", 
                               "python /tmp/wh.py"], shell=False)
-            print b
+            return b
         except CalledProcessError as e:
             print e
             raise ForensicError
@@ -98,6 +99,9 @@ b=BrowserHistory()
 b.get_file("/tmp/xyzzy")
 b.send_file("/tmp/xyzzy")
 
-b.exec_file()
+foo=b.exec_file()
+bar=b.exec_file()
+print foo.rstrip()
+print bar.rstrip()
 
 
