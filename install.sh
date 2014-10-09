@@ -97,7 +97,7 @@ cat $APPDIR/forensic/forensic/settings.py_ | sed s#@@DATABASE@@#$DATABASE# | sed
 rm $APPDIR/forensic/forensic/settings.py_
 
 echo "process uitools.py"
-cat $APPDIR/forensic/ui/uitools.py_ | sed s#@@CHELPER@@#$CHELPER# > $APPDIR/forensic/ui/uitools.py
+cat $APPDIR/forensic/ui/uitools.py_ | sed s#@@CHELPER@@#$CHELPER# | sed s#@@MOUNTPOINT@@#$MOUNTDIR# | sed s#@@PREFIX@@#$IMAGEDIR# > $APPDIR/forensic/ui/uitools.py
 rm $APPDIR/forensic/ui/uitools.py_
 
 echo "process models.py"

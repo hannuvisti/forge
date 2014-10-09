@@ -19,6 +19,7 @@ import random
 import shutil
 import uitools
 from uitools import ForensicError
+from uitools import Chelper
 import datetime
 import importlib
 
@@ -27,8 +28,6 @@ import importlib
 
 #PREFIX = "/usr/local/forge/Images"
 #MOUNTPOINT = "/mnt/image"
-PREFIX = "@@IMAGEDIR@@"
-MOUNTPOINT = "@@MOUNTPOINT@@"
 
 # Create your models here.
 class User(models.Model):
@@ -117,6 +116,7 @@ class Case(models.Model):
     fsparam3 = models.IntegerField(blank=True, default=0)
     fsparam4 = models.IntegerField(blank=True, default=0)
     fsparam5 = models.IntegerField(blank=True, default=0)
+
     def __unicode__(self):
         return self.name
     
@@ -126,7 +126,9 @@ class Case(models.Model):
         secret_strategies = self.secretstrategy_set.all()
         command = self.filesystem.get_create_function()
         fsclass = self.filesystem.get_class()
-        
+        mountpoint = Chelper().mountpoint
+        prefix = Chelper().prefix
+
         if command == None:
             uitools.errlog("no FS create command")
             return None
@@ -152,7 +154,7 @@ class Case(models.Model):
             image = Image(filename=filename, seqno = i, case = self)
             image.save()
             mount_file = image.getLongFilename()
-            fsystem = fsclass(mount_file, MOUNTPOINT)
+            fsystem = fsclass(mount_file, mountpoint)
             fsystem.fs_init()
             if fsystem.mount_image() != 0:
                 failed_list.append([i,"Cannot mount image file"])
@@ -230,7 +232,7 @@ class Case(models.Model):
                 os.remove(mount_file)
                 continue
             try:
-                dfile = open(MOUNTPOINT+"/info.txt","w")
+                dfile = open(mountpoint+"/info.txt","w")
                 dfile.write("Created by Forensic test image generator")
                 dfile.write("Case %s, image %d" % (self.name,i))
                 dfile.close()
@@ -263,7 +265,7 @@ class Case(models.Model):
             """ read FS structures once more from scratch """
             del fsystem           
 
-            fsystem = fsclass(mount_file, MOUNTPOINT)
+            fsystem = fsclass(mount_file, mountpoint)
             fsystem.fs_init()
             flag = False
             """ Implement time """
@@ -282,7 +284,7 @@ class Case(models.Model):
                 continue
             
             del fsystem
-            fsystem = fsclass(mount_file,MOUNTPOINT)
+            fsystem = fsclass(mount_file,mountpoint)
             fsystem.fs_init()
             """ implement actions """
             flag = False
@@ -359,13 +361,16 @@ class Image(models.Model):
     case = models.ForeignKey(Case)
     filename = models.CharField(max_length=256, blank=True)
     weekvariance = models.IntegerField(blank=True, default=0)
+
     def __unicode__(self):
         return self.filename
     
     def getLongFilename(self):        
-        return PREFIX+"/"+self.filename
+        return Chelper().prefix+"/"+self.filename
     
     def implement_trivial_strategy(self, strategy, dirtime):
+        mountpoint = Chelper().mountpoint
+
         initialdelta = datetime.timedelta(seconds=random.randint(5,360))
         ''' Time difference of directory files will be randomly 0-3 seconds ''' 
         filedelta = datetime.timedelta(seconds=random.randint(0,3))
@@ -383,7 +388,7 @@ class Image(models.Model):
         except ValueError:
             files = file_candidates
         
-        strategypath = MOUNTPOINT+strategy.path
+        strategypath = mountpoint+strategy.path
         try:
             if not os.path.exists(strategypath):
                 os.makedirs(strategypath)

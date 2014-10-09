@@ -14,10 +14,10 @@ along with ForGe.  If not, see <http://www.gnu.org/licenses/>.
 from subprocess import call
 import sys
 
+PREFIX = "@@PREFIX@@"
+MOUNTPOINT = "@@MOUNTPOINT@@"
 HELPER = "@@CHELPER@@"
-
 WDEST = "/var/lib/lxc/forge-lxc/rootfs/tmp/wh.py"
-
 WSRC = "/usr/local/forge/creator/browserhistory/webhistory.py"
 
 def errlog(message):
@@ -34,3 +34,5 @@ class Chelper(object):
         self.binary = HELPER
         self.wdest = WDEST
         self.wsrc = WSRC
+        self.prefix = PREFIX
+        self.mountpoint = MOUNTPOINT
