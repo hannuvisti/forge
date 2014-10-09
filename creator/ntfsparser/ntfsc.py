@@ -2,7 +2,7 @@
 Created on 22 May 2013
 
 @author: visti
-Copyright 2013 Hannu Visti
+Copyright 2013-2014 Hannu Visti
 
 This file is part of ForGe forensic test image generator.
 ForGe is distributed in the hope that it will be useful,
@@ -22,20 +22,15 @@ from subprocess import call
 from attributes import _NTFSAttributeBitmap
 import sys
 from ui.uitools import ForensicError
+from ui.uitools import Chelper
 from random import randint
 
 FLAG_SYSTEM = 0x1
 FLAG_DIRECTORY = 0x2
 FLAG_REGULAR = 0x4
 
-#HELPER = "/usr/local/forge/chelper/chelper"
-HELPER = "@@CHELPER@@"
-
 def NTFSCreateImage(name, size, garbage, clustersize=4):
-    #ntfs=NTFSC("/home/visti/Project/Images/image-ntfs")
-    #ntfs.fs_init()
-
-    #ntfs=NTFSC("/home/visti/Project/Images/image-ntfs", "/mnt/image")
+    c = Chelper()
     if len(name) <= 8:
         imagename = name
     else:
@@ -46,7 +41,7 @@ def NTFSCreateImage(name, size, garbage, clustersize=4):
     else:
         fill = "clean"
          
-    result = call([HELPER, "create", "ntfs", str(size), str(clustersize), imagename, 
+    result = call([c.binary, "create", "ntfs", str(size), str(clustersize), imagename, 
                    fill, name], shell=False)
     return result
 
@@ -114,7 +109,7 @@ class NTFSC(FileSystemC):
         super(NTFSC, self).__init__(fname, mountpoint)
         self.fs_fstype = "ntfs"
         self.f_mounted = False
-        
+        self.helper = Chelper()
 
     def ntfs_vbr_init(self, vbr):
         if vbr[3:7] != "NTFS":
@@ -246,15 +241,15 @@ class NTFSC(FileSystemC):
         return result
             
     def mount_image(self):
-        result = call([HELPER, "attach", "ntfs", self.fs_shortname], shell=False)
-        #print >>sys.stderr, "result:", result
+        result = call([self.helper.binary, "attach", "ntfs", self.fs_shortname], 
+                      shell=False)
         if result == 0:
             self.f_mounted = True
         return result
     def dismount_image(self):
         #if not self.f_mounted:
         #    return 0
-        result = call([HELPER, "detach"], shell=False)
+        result = call([self.helper.binary, "detach"], shell=False)
         if result == 0:
             self.f_mounted = False
         return result
