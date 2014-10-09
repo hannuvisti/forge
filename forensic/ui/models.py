@@ -101,6 +101,34 @@ class SecretFileItem(models.Model):
     def __unicode__(self):
         return self.name
 
+class Webhistory(models.Model):
+    name = models.CharField(max_length = 256, unique=True)
+    date_created = models.DateField('date created')
+
+    def __unicode__(self):
+        return self.name
+
+    def processWebhistory(self):
+        pass
+
+class Url(models.Model):
+    case = models.ForeignKey(Webhistory)
+    url = models.CharField(max_length = 1024)
+    num_clicks = models.IntegerField(default=1)
+    click_depth = models.IntegerField(default=1)
+    date_clicked = models.DateField('date clicked')
+    group = models.IntegerField(default=0)
+
+class SearchEngine(models.Model):
+    case = models.ForeignKey(Webhistory)
+    ENGINES=((0,"Google"), (1,"Yahoo"),(2,"Bing"))
+    engine = models.IntegerField(choices=ENGINES, default=0)
+    search_string = models.CharField(max_length = 256)
+    date_clicked = models.DateField('date clicked')
+    group = models.IntegerField(default=0)
+    click_result = models.IntegerField(default=0)
+    click_depth = models.IntegerField(default=1)
+
 class Case(models.Model):
     name = models.CharField(max_length = 256, unique=True)
     owner = models.ForeignKey(User)

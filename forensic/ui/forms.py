@@ -12,9 +12,14 @@ along with ForGe.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
 from django.forms import ModelForm
-from models import Case
+from models import Case, Webhistory
 
 class RequestCaseForm(ModelForm):
     class Meta:
         model = Case
         fields = ["name", "owner", "date_created", "filesystem", "size", "amount", "garbage", "fsparam1"]
+
+class RequestWebhistoryForm(ModelForm):
+    class Meta:
+        model = Webhistory
+        fields = ["name"]

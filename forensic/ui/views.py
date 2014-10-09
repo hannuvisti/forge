@@ -22,10 +22,11 @@ import sys
 import datetime
 from django.core.context_processors import csrf
 from django.shortcuts import render, get_object_or_404, render_to_response
-from ui.forms import RequestCaseForm
+from ui.forms import RequestCaseForm,RequestWebhistoryForm
 from ui.uitools import errlog
 
-from ui.models import Case, TrivialFileItem, User, FileSystem, HidingMethod, SecretFileItem, SecretStrategy, Image
+from ui.models import Case, TrivialFileItem, User, FileSystem, HidingMethod
+from ui.models import  SecretFileItem, SecretStrategy, Image, Webhistory
 from ui.models import HiddenObject, TrivialObject
 
 class Selection():
@@ -234,6 +235,41 @@ def imageView(request, iid=-1):
                 return HttpResponseRedirect("/ui/images")
         
     return render(request, "ui/images.html", {"form": form, "active_cases": table})
+
+def webhistoryView(request, iid=-1):
+    if request.method == "POST":
+        
+        click = request.POST.getlist("click2")
+        if click:
+            Selection.setSelection(int(click[0]))
+            return HttpResponseRedirect("/ui/webhistory"+"/"+click[0])
+        form = RequestWebhistoryForm(request.POST)
+
+        if u'create' in request.POST:
+            if iid == -1:
+                return HttpResponseRedirect("/ui/webhistory")
+            case = Webhistory.objects.get(pk=iid)
+            if not case:
+                return HttpResponseRedirect("/ui/webhistory")
+            qres = case.processWebhistory()
+            if qres:
+                return render(request, "ui/creationreport.html", 
+                              {"case":case, "success": qres[0], "notsuccess": qres[1]})
+            else:
+                return HttpResponseRedirect("/ui/webhistory")
+        return HttpResponseRedirect("/ui/webhistory")
+    else:
+        table = Webhistory.objects.all() 
+        if iid == -1:     
+            form = RequestWebhistoryForm()
+        else:
+            try:
+                c, = Webhistory.objects.filter(pk=iid)
+                form = RequestWebhistoryForm(instance=c)
+            except ValueError:
+                return HttpResponseRedirect("/ui/webhistory")
+        
+    return render(request, "ui/webhistory.html", {"form": form, "active_cases": table})
  
 def solutionView(request, iid=-1):
     table = Case.objects.all()
