@@ -104,10 +104,6 @@ echo "process models.py"
 cat $APPDIR/forensic/ui/models.py_ | sed s#@@IMAGEDIR@@#$IMAGEDIR# | sed s#@@MOUNTPOINT@@#$MOUNTDIR# > $APPDIR/forensic/ui/models.py
 rm $APPDIR/forensic/ui/models.py_
 
-echo "process ntfsc.py"
-cat $APPDIR/creator/ntfsparser/ntfsc.py_ | sed s#@@CHELPER@@#$CHELPER# > $APPDIR/creator/ntfsparser/ntfsc.py 
-rm $APPDIR/creator/ntfsparser/ntfsc.py_
-
 echo "process fat.py"
 cat $APPDIR/creator/fat/fat.py_ | sed s#@@CHELPER@@#$CHELPER# > $APPDIR/creator/fat/fat.py
 rm $APPDIR/creator/fat/fat.py_
