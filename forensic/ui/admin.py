@@ -18,7 +18,8 @@ along with ForGe.  If not, see <http://www.gnu.org/licenses/>.
 from django.contrib import admin
 from ui.models import User,Case,Image,TrivialFileItem, FileSystem, HidingMethod
 from ui.models import Webhistory,TrivialStrategy,Url,SearchEngine
-from ui.models import TrivialObject, SecretStrategy, HiddenObject, SecretFileItem
+from ui.models import TrivialObject, SecretStrategy, HiddenObject
+from ui.models import SecretFileItem, WebMethod
 from django.forms import ModelForm
 import datetime
 
@@ -48,6 +49,10 @@ class HidingMethodAdmin(admin.ModelAdmin):
     list_display= ("name", "priority", "pythonpath", "pythonhideclass")
     search_fields = ["name"]        
 
+class WebMethodAdmin(admin.ModelAdmin):
+    list_display= ("name", "priority", "pythonpath", "pythonhideclass")
+    search_fields = ["name"]        
+
 class CaseAdmin(admin.ModelAdmin):
     
     #inlines = [UserInline]
@@ -58,7 +63,7 @@ class CaseAdmin(admin.ModelAdmin):
     form = CaseAdminForm
 
 class WebhistoryAdmin(admin.ModelAdmin):
-    list_display=('name', 'date_created')
+    list_display=('name', 'ntocreate', 'date_created', 'exact', 'method')
     search_fields = ['name']
 
 class UserAdmin(admin.ModelAdmin):
@@ -104,6 +109,7 @@ admin.site.register(User, UserAdmin)
 admin.site.register(Url, UrlAdmin)
 admin.site.register(SearchEngine, SearchengineAdmin)
 admin.site.register(Webhistory, WebhistoryAdmin)
+admin.site.register(WebMethod, WebMethodAdmin)
 admin.site.register(TrivialFileItem, FileAdmin)
 admin.site.register(SecretFileItem, SecretFileAdmin)
 admin.site.register(FileSystem, FileSystemAdmin)

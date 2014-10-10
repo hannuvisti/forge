@@ -15,6 +15,7 @@ along with ForGe.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
 from random import choice
+from hiding.ads import HidingMethod
 from ui.uitools import errlog
 from ui.uitools import ForensicError
 from ui.uitools import Chelper
@@ -36,10 +37,11 @@ FLAG_TIMELINE = 3
 """ params taken:
     delete:True   - deletes file after concatenation """
 
-class BrowserHistory(object):
+class BrowserHistory(HidingMethod):
     def __init__(self,filesystem=None):
+        super(BrowserHistory, self).__init__()
         self.chelper = Chelper()
-        self.prepare_container()
+        self.fs = filesystem
 
     def prepare_container(self):
         try:
@@ -87,21 +89,56 @@ class BrowserHistory(object):
     def exec_file(self):
 
         try:
-            b = check_output([self.chelper.binary,"lxc", "lxc-attach", "wait", "vocal",
+            b = check_output([self.chelper.binary,"lxc", "lxc-attach", "wait", 
+                              "vocal",
                               "su", "-", "forge", "-c", 
                               "python /tmp/wh.py"], shell=False)
-            return b
+            return b.rstrip()
         except CalledProcessError as e:
             print e
             raise ForensicError
 
-b=BrowserHistory()
-b.get_file("/tmp/xyzzy")
-b.send_file("/tmp/xyzzy")
+    def hide_url(self, trivial_urls=[], secret_urls=[], amount=1,
+                 trivial_searches=[], secret_searches=[], param={}):
 
-foo=b.exec_file()
-bar=b.exec_file()
-print foo.rstrip()
-print bar.rstrip()
+        self.get_file("/tmp/forge.TMP")
+        
+        fi = open("/tmp/forge.TMP", "a")
+
+        for u in trivial_urls:
+            if u.num_clicks < 1:
+                fi.write("b.open_page(\"%s\")" % u.url)
+                fi.write("\n")
+            else:
+                fi.write("b.do_n_clicks(\"%s\", %d,random=False)" % 
+                         (u.url, u.num_clicks))
+                fi.write("\n")
+
+
+        for u in secret_urls:
+            if u.num_clicks < 1:
+                fi.write("b.open_page(\"%s\")" % u.url)
+                fi.write("\n")
+            else:
+                fi.write("b.do_n_clicks(\"%s\", %d,random=False)" % 
+                         (u.url, u.num_clicks))
+                fi.write("\n")
+
+        fi.write ("b.close()")
+        fi.write("\n")
+        fi.close()
+
+        self.prepare_container()
+        self.send_file("/tmp/forge.TMP")
+        print self.exec_file()
+
+#b=BrowserHistory()
+#b.get_file("/tmp/xyzzy")
+#b.send_file("/tmp/xyzzy")
+
+#foo=b.exec_file()
+#bar=b.exec_file()
+#print foo
+#print bar
 
 

@@ -27,7 +27,7 @@ from ui.uitools import errlog
 
 from ui.models import Case, TrivialFileItem, User, FileSystem, HidingMethod
 from ui.models import  SecretFileItem, SecretStrategy, Image, Webhistory
-from ui.models import HiddenObject, TrivialObject
+from ui.models import HiddenObject, TrivialObject, WebMethod
 
 class Selection():
     selected = 0
@@ -77,42 +77,70 @@ def initDbView(request):
     if len(foo) == 0:
         u1 = User(name="forge", role=0, valid_until="2013-12-31")
         u1.save()
-        f = FileSystem(name="NTFS", pythonpath="ntfsparser.ntfsc",pythoncreatecommand="NTFSCreateImage", 
+        f = FileSystem(name="NTFS", pythonpath="ntfsparser.ntfsc",
+                       pythoncreatecommand="NTFSCreateImage", 
                        fsclass = "NTFSC")
         f.save()
-        f = FileSystem(name="FAT12", pythonpath="fat.fat",pythoncreatecommand="FAT12CreateImage", 
+        f = FileSystem(name="FAT12", pythonpath="fat.fat",
+                       pythoncreatecommand="FAT12CreateImage", 
                        fsclass = "FATC")
         f.save()
-        f = FileSystem(name="FAT16", pythonpath="fat.fat",pythoncreatecommand="FAT16CreateImage", 
+        f = FileSystem(name="FAT16", pythonpath="fat.fat",
+                       pythoncreatecommand="FAT16CreateImage", 
                        fsclass = "FATC")
         f.save()
-        f = FileSystem(name="FAT32", pythonpath="fat.fat",pythoncreatecommand="FAT32CreateImage", 
+        f = FileSystem(name="FAT32", pythonpath="fat.fat",
+                       pythoncreatecommand="FAT32CreateImage", 
                        fsclass = "FATC")
         f.save()
-        f = FileSystem(name="FAT", pythonpath="fat.fat",pythoncreatecommand="FATGenericCreateImage", 
+        f = FileSystem(name="FAT", pythonpath="fat.fat",
+                       pythoncreatecommand="FATGenericCreateImage", 
                        fsclass = "FATC")
         f.save()
-        h = HidingMethod(name="ADS", priority = 2, pythonpath="hiding.ads", pythonhideclass = "AlternateDataStream")
+        h = HidingMethod(name="ADS", priority = 2, pythonpath="hiding.ads",
+                         pythonhideclass = "AlternateDataStream")
+
         h.save()
-        h = HidingMethod(name="Deleted file", priority = 3, pythonpath="hiding.deletedfile", pythonhideclass = "DeletedFile")
+        h = HidingMethod(name="Deleted file", priority = 3, 
+                         pythonpath="hiding.deletedfile", 
+                         pythonhideclass = "DeletedFile")
         h.save()
-        h = HidingMethod(name="Extension change", priority = 2, pythonpath="hiding.extensionchange", pythonhideclass="ExtensionChange")
+        h = HidingMethod(name="Extension change", priority = 2, 
+                         pythonpath="hiding.extensionchange", 
+                         pythonhideclass="ExtensionChange")
         h.save()
-        h = HidingMethod(name="Concatenate", priority = 2, pythonpath="hiding.concatenate", pythonhideclass="ConcatenateFile")
+        h = HidingMethod(name="Concatenate", priority = 2, 
+                         pythonpath="hiding.concatenate", 
+                         pythonhideclass="ConcatenateFile")
         h.save()
-        h = HidingMethod(name="File slack", priority = 5, pythonpath="hiding.fileslack", pythonhideclass="FileSlack")
+        h = HidingMethod(name="File slack", priority = 5, 
+                         pythonpath="hiding.fileslack", 
+                         pythonhideclass="FileSlack")
         h.save()
-        h = HidingMethod(name="Steganography", priority = 1, pythonpath="hiding.steganography", pythonhideclass="Steganography")
+        h = HidingMethod(name="Steganography", priority = 1, 
+                         pythonpath="hiding.steganography", 
+                         pythonhideclass="Steganography")
         h.save()
-        h = HidingMethod(name="Not hidden", priority = 4, pythonpath="hiding.donothide", pythonhideclass="DoNotHideFile")
+        h = HidingMethod(name="Not hidden", priority = 4, 
+                         pythonpath="hiding.donothide", 
+                         pythonhideclass="DoNotHideFile")
         h.save()
-        h = HidingMethod(name="Unallocated space", priority = 5, pythonpath="hiding.unallocated_space", pythonhideclass="UnallocatedSpace")
+        h = HidingMethod(name="Unallocated space", priority = 5, 
+                         pythonpath="hiding.unallocated_space", 
+                         pythonhideclass="UnallocatedSpace")
         h.save()
-        c=Case(name="casetest", owner=User.objects.get(name="forge"), date_created="2013-06-01", 
-               size="10M", amount=3, garbage=False,fsparam1=8, weekvariance=26, filesystem= FileSystem.objects.get(name="NTFS"),
+        wmh = WebMethod(name="URL and search", priority = 1, 
+                         pythonpath="browserhistory.bhistory", 
+                         pythonhideclass="BrowserHistory")
+        wmh.save()
+        c=Case(name="casetest", owner=User.objects.get(name="forge"), 
+               date_created="2013-06-01", 
+               size="10M", amount=3, garbage=False,fsparam1=8, weekvariance=26, 
+               filesystem= FileSystem.objects.get(name="NTFS"),
                roottime=datetime.datetime(2010,7,16,3,42,42))
         c.save()
-        c.trivialstrategy_set.create(type=0, quantity=2,  exact = True, path="/holiday",
+        c.trivialstrategy_set.create(type=0, quantity=2,  exact = True, 
+                                     path="/holiday",
                                      dirtime = datetime.datetime(2010,12,24,17,0,0))
         c.trivialstrategy_set.create(type=1, quantity=2, exact = True, path="/doc",
                                      dirtime = datetime.datetime(2011,2,28,9,30,15))
@@ -244,8 +272,7 @@ def webhistoryView(request, iid=-1):
             Selection.setSelection(int(click[0]))
             return HttpResponseRedirect("/ui/webhistory"+"/"+click[0])
         form = RequestWebhistoryForm(request.POST)
-
-        if u'create' in request.POST:
+        if u'create' in request.POST: 
             if iid == -1:
                 return HttpResponseRedirect("/ui/webhistory")
             case = Webhistory.objects.get(pk=iid)

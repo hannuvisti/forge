@@ -82,7 +82,5 @@ sleep(3)
 #
 #
 # Inject your code here and finish by calling b.close()
-b.do_google_search("Hannu Visti",1)
-sleep(2)
-b.close()
+
 

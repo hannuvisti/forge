@@ -72,6 +72,7 @@ class HidingMethod(models.Model):
     priority = models.IntegerField(default=0)
     pythonpath = models.CharField(max_length=256, blank=True)
     pythonhideclass = models.CharField(max_length=256, blank=True)
+
     def __unicode__(self):
         return self.name
     def get_hide_class(self):
@@ -83,7 +84,24 @@ class HidingMethod(models.Model):
             self._hide_class_name = getattr(h, self.pythonhideclass)
             func = self._hide_class_name
         return func
-  
+
+class WebMethod(models.Model):
+    name = models.CharField(max_length=32, unique=True)
+    priority = models.IntegerField(default=0)
+    pythonpath = models.CharField(max_length=256, blank=True)
+    pythonhideclass = models.CharField(max_length=256, blank=True)
+    def __unicode__(self):
+        return self.name
+
+    def get_hide_class(self):
+        try:
+            func = self._hide_class_name
+        except AttributeError:
+            h = importlib.import_module(self.pythonpath)
+            
+            self._hide_class_name = getattr(h, self.pythonhideclass)
+            func = self._hide_class_name
+        return func
 
 class TrivialFileItem(models.Model):
     TYPES = ((0,"Image"), (1,"Document"), (2,"Email"), (3,"Web"), (4,"Audio"), (5, "Video"), 
@@ -104,12 +122,34 @@ class SecretFileItem(models.Model):
 class Webhistory(models.Model):
     name = models.CharField(max_length = 256, unique=True)
     date_created = models.DateField('date created')
-
+    exact = models.BooleanField(default=True)
+    method = models.ForeignKey(WebMethod)
+    ntocreate = models.IntegerField("n",default=1)
     def __unicode__(self):
         return self.name
 
     def processWebhistory(self):
-        pass
+        try:
+            self.filesystem = FileSystem.objects.filter(name="NTFS")[0]
+        except:
+            raise ForensicError("no NTFS")
+
+        t_urls = self.url_set.filter(group = 0)
+        s_urls = self.url_set.exclude(group = 0)
+        t_searches = self.searchengine_set.filter(group=0)
+        s_searches = self.searchengine_set.exclude(group=0)
+        command = self.filesystem.get_create_function()
+        fsclass = self.filesystem.get_class()
+        mountpoint = Chelper().mountpoint
+        prefix = Chelper().prefix
+
+
+        uclass = self.method.get_hide_class()
+        webm = uclass(self.filesystem)
+
+        webm.hide_url(trivial_urls=t_urls,secret_urls=s_urls,
+                      amount=self.ntocreate,
+                      secret_searches=s_searches, trivial_searches=t_searches)
 
 class Url(models.Model):
     case = models.ForeignKey(Webhistory)
@@ -173,8 +213,9 @@ class Case(models.Model):
                 continue
             filename = self.name+"-"+str(i)
             
-            result =  command(size=self.size, garbage=self.garbage, clustersize=self.fsparam1, 
-                                  name=filename)
+            result =  command(size=self.size, garbage=self.garbage, 
+                              clustersize=self.fsparam1, 
+                              name=filename)
             if result != 0:
                 uitools.errlog( "something may be wrong, image not created")
                 failed_list.append([i,"Unable to create image file"])
