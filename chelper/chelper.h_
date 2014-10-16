@@ -19,12 +19,13 @@
 /* #define PATH "/usr/local/forge/images/" */
 
 /* Path where images in process are temporarily mounted */
-#define MOUNTPOINT "@@MOUNTPOINT@@" 
+#define MOUNTPOINT "@@MOUNTPOINT@@"
 /* #define MOUNTPOINT "/tmp/image" */
 
 /* This points to webdriver.py inside the container */
 #define WEBDRIVER_REMOTE "/var/lib/lxc/forge-lxc/rootfs/usr/local/lib/python2.7/dist-packages/selenium/webdriver/firefox/webdriver.py"
 #define WEBDRIVER_LOCAL_DIR "/usr/local/lib/python2.7/dist-packages/selenium/webdriver/firefox"
+#define WEBDRIVER_PYC "/usr/local/lib/python2.7/dist-packages/selenium/webdriver/firefox/webdriver.pyc"
 
 /* This is the tmp file in the container */
 #define CONTAINER_TMP "/var/lib/lxc/forge-lxc/rootfs/tmp/wh.py"
@@ -46,3 +47,4 @@ int lxc_stop(void);
 int lxc_attach(int,char**);
 int process_webdriver(void);
 int copy_file(char*);
+int copy_result(char*, char*);

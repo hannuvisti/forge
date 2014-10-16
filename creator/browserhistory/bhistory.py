@@ -24,6 +24,7 @@ from subprocess import CalledProcessError
 from shutil import copyfile
 from traceback import format_exc
 from time import sleep
+import uuid
 import os
 import sys
 
@@ -48,8 +49,6 @@ class BrowserHistory(HidingMethod):
             a=check_output([self.chelper.binary, "lxc", "lxc-destroy"], 
                            shell=False)
             a=check_output([self.chelper.binary, "lxc", "lxc-create"], 
-                           shell=False)
-            a=check_output([self.chelper.binary, "lxc", "process_webdrive"], 
                            shell=False)
             sleep (3)
             a=check_output([self.chelper.binary, "lxc", "lxc-attach", "nowait", "silent",
@@ -100,11 +99,10 @@ class BrowserHistory(HidingMethod):
 
     def hide_url(self, trivial_urls=[], secret_urls=[], amount=1,
                  trivial_searches=[], secret_searches=[], param={}):
-
-        self.get_file("/tmp/forge.TMP")
         
+        self.get_file("/tmp/forge.TMP")
         fi = open("/tmp/forge.TMP", "a")
-
+        
         for u in trivial_urls:
             if u.num_clicks < 1:
                 fi.write("b.open_page(\"%s\")" % u.url)
@@ -128,17 +126,37 @@ class BrowserHistory(HidingMethod):
         fi.write("\n")
         fi.close()
 
+        tmpdir = "/tmp/Forge."+uuid.uuid4().hex
+        try:
+            os.mkdir(tmpdir)
+        except:
+            raise ForensicError("make temp dir")
+
         self.prepare_container()
         self.send_file("/tmp/forge.TMP")
-        print self.exec_file()
+        
+        resl=[]
+        i=0
+        while i < amount:
+            i += 1
+            result_path = self.exec_file()
+            if result_path == "None":
+                resl.append(dict(status="Fail", fname=None,size=0))
+            else:
+                try:
+                    rloc = check_output([self.chelper.binary,"lxc", "copy_result", 
+                                         self.chelper.rootdir+result_path, tmpdir], 
+                                        shell=False).rstrip()
+                except:
+                    raise ForensicError("copy results");
 
-#b=BrowserHistory()
-#b.get_file("/tmp/xyzzy")
-#b.send_file("/tmp/xyzzy")
+                try:
+                    historysize = str(int(os.path.getsize(rloc)/1000000)+8)+"M"
+                except:
+                    raise ForensicError("Cannot stat results")
 
-#foo=b.exec_file()
-#bar=b.exec_file()
-#print foo
-#print bar
+                resl.append(dict(status="OK", fname=rloc, size=historysize))
+            
+        self.delete_container()
 
-
+        return dict(status=0,message="",results=resl,tdir=tmpdir)

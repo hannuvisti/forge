@@ -66,10 +66,17 @@ int process_lxc(int argc, char **argv) {
 
   if (strcmp(argv[2],"copy_file") == 0) {
     if (argc < 3) {
-      fprintf(stderr,"usage: chelper lxc copy_file srcfile");
+      fprintf(stderr,"usage: chelper lxc copy_file srcfile\n");
       exit(1);
     }
     exit(copy_file(argv[3]));
+  }
+  if (strcmp(argv[2], "copy_result") == 0) {
+    if (argc < 4) {
+      fprintf(stderr, "usage: chelper lxc copy_result srcfile dstdir\n");
+      exit(1);
+    }
+    exit(copy_result(argv[3], argv[4]));
   }
 
   fprintf(stderr,"unrecognised lxc command\n");
@@ -181,7 +188,7 @@ int lxc_create() {
   }
 
   /* Hack selenium to not delete cache and history */
-  process_webdriver();
+  process_webdriver(); 
   exit(0);
 }
 
@@ -426,8 +433,13 @@ int process_webdriver() {
   fclose(fp);
 
 
-  /* Compile to pyc */
-  char *arg[] = {LXC_ATTACH, "-n", LXC_NAME, "--", PYTHON, "-m", "compileall", WEBDRIVER_LOCAL_DIR, NULL};
+  /* Compile to pyc 
+     char *arg[] = {LXC_ATTACH, "-n", LXC_NAME, "--", PYTHON, "-m", "compileall", WEBDRIVER_LOCAL_DIR, NULL}; */
+  
+  /* delete pyc */
+  char *arg[] = {LXC_ATTACH, "-n", LXC_NAME, "--", "rm", "-f", WEBDRIVER_PYC, NULL};
+
+  
   pid = fork();
   if (pid == -1) {
     perror(PNAME);
@@ -500,3 +512,54 @@ int copy_file(char *src) {
     close(f_out);
     return(0);
 }            
+int copy_result(char *src, char *dstdir) {
+  int f_in, f_out;
+  char *dfname, *q;
+  char buf[1024];
+  ssize_t nread;
+
+  f_in=open(src, O_RDONLY);
+  if (f_in < 0) {
+    perror(PNAME);
+    exit(1);
+  }
+  q = strrchr(src, '/');
+  if (q == NULL) {
+    fprintf(stderr, "malformed src path\n");
+    exit(1);
+  }
+
+  dfname = malloc(sizeof(char)*(strlen(dstdir)+strlen(src)+2));
+  if (dfname == NULL) {
+    perror(PNAME);
+    exit(1);
+  }
+  strcpy(dfname,dstdir);
+  strcat(dfname,q);
+
+  f_out = open(dfname, O_WRONLY | O_CREAT | O_EXCL, 0777);
+  if (f_out < 0) {
+    perror(PNAME);
+    exit(1);
+  }
+  while (nread = read(f_in, buf, sizeof(buf)), nread > 0) {
+      char *out_b = buf;
+      ssize_t nwritten;
+
+      do {
+	nwritten = write(f_out, out_b, nread);
+	if (nwritten >= 0) {
+	  nread -= nwritten;
+	  out_b += nwritten;
+	} 
+	else {
+	  fprintf(stderr, "file copy error\n");
+	  exit(1);
+	}
+      } while (nread > 0);
+    }
+    close(f_in);
+    close(f_out);
+    printf("%s\n", dfname);
+    return(0);
+}

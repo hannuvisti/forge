@@ -13,6 +13,8 @@ from selenium.webdriver.common.by import By
 import sys
 import traceback
 from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
+import shutil
+import os
 
 class BrowserClass(object):
     def __init__ (self):
@@ -24,7 +26,14 @@ class BrowserClass(object):
             print traceback.format_exc()
             exit(1)
     def close(self):
-        print self.browser.quit()
+        tmpdir = self.browser.quit()
+        try:
+            ar = shutil.make_archive(tmpdir, root_dir=tmpdir, format="tar")
+            os.chmod(ar, 0777)
+            print ar
+        except:
+            print "None"
+            exit(1)
         exit(0)
 
     def open_page(self,url):
@@ -39,6 +48,7 @@ class BrowserClass(object):
         try:
             self.browser.get(url)
         except:
+            print traceback.format_exc()
             exit(1)
 
         el = self.browser.find_elements_by_tag_name("a")
@@ -63,6 +73,7 @@ class BrowserClass(object):
             el.send_keys(searchtext)
             el.send_keys(Keys.RETURN)
         except:
+            print traceback.format_exc()
             exit(1)
 
         if clickresult == 0:

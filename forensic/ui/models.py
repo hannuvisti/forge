@@ -1,5 +1,5 @@
 '''
-Copyright 2013 Hannu Visti
+Copyright 2013-2014 Hannu Visti
 
 This file is part of ForGe forensic test image generator.
 ForGe is distributed in the hope that it will be useful,
@@ -20,16 +20,10 @@ import shutil
 import uitools
 from uitools import ForensicError
 from uitools import Chelper
+from subprocess import call
 import datetime
 import importlib
 
-
-#from django.core.validators import MinValueValidator, MaxValueValidator
-
-#PREFIX = "/usr/local/forge/Images"
-#MOUNTPOINT = "/mnt/image"
-
-# Create your models here.
 class User(models.Model):
     ROLES = ((0,"Administrator"), (1,"Teacher"), (2,"Student"), (3,"Tester"))
     name = models.CharField(max_length=64, unique=True)
@@ -128,6 +122,9 @@ class Webhistory(models.Model):
     def __unicode__(self):
         return self.name
 
+    def getLongFilename(self,fname):        
+        return Chelper().prefix+"/"+fname
+
     def processWebhistory(self):
         try:
             self.filesystem = FileSystem.objects.filter(name="NTFS")[0]
@@ -147,9 +144,52 @@ class Webhistory(models.Model):
         uclass = self.method.get_hide_class()
         webm = uclass(self.filesystem)
 
-        webm.hide_url(trivial_urls=t_urls,secret_urls=s_urls,
-                      amount=self.ntocreate,
-                      secret_searches=s_searches, trivial_searches=t_searches)
+        rdict = webm.hide_url(trivial_urls=t_urls,secret_urls=s_urls,
+                              amount=self.ntocreate,
+                              secret_searches=s_searches, trivial_searches=t_searches)
+        if rdict["status"] == 2:
+            raise ForensicError(rdict["message"])
+
+        i=0
+        failed_list=[]
+        for r in rdict["results"]:
+            i += 1
+            if r["status"] != "OK":
+                continue
+
+            iname=self.name+"-"+str(i)
+            fcr =  command(size=r["size"], garbage=False,
+                           clustersize=8, 
+                           name=iname)
+            if fcr != 0:
+                uitools.errlog( "something may be wrong, image not created")
+                failed_list.append([i,"Unable to create image file"])
+                continue
+            mount_file = self.getLongFilename(iname)
+            fsystem = fsclass(mount_file, mountpoint)
+            fsystem.fs_init()
+            if fsystem.mount_image() != 0:
+                failed_list.append([i,"Cannot mount image file"])
+                uitools.errlog("--- Cannot mount file, image not processed")
+                os.remove(mount_file)
+                continue
+            try:
+                cdir=os.getcwd()
+                os.chdir(mountpoint)
+            except:
+                fsystem.dismount_image()
+                os.remove(mount_file)
+                failed_list.append([i, "unable to change directory"])
+                continue
+            cres = call(["/bin/tar", "xf", r["fname"]], shell=False)
+            if cres != 0:
+                uitools.errlog("Unable to untar %s" % r["fname"])
+                fsystem.dismount_image()
+                os.remove(mount_file)
+                failed_list.append([i, "unable to untar"])
+                continue
+            os.chdir(cdir)
+            fsystem.dismount_image()
 
 class Url(models.Model):
     case = models.ForeignKey(Webhistory)
