@@ -71,4 +71,4 @@ class DeletedFile(HidingMethod):
             raise ForensicError("Cannot write file")
         if internalpath.find("/./") == 0:
             internalpath = internalpath[2:]      
-        return dict(instruction=hf,path=internalpath,todelete=[targetfile])
+        return dict(instruction=hf,todelete=[targetfile])
