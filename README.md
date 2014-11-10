@@ -3,6 +3,13 @@
 Forensic test image generator v2.0
 Copyright Hannu Visti 2013-2014, licenced under Gnu General Public Licence
 
+## Development information
+
+This commit merges "webhistory" branch into master.  Webhistory is by no means a completed project but this version does not cause problems to the main application and developing them independently from this point forward serves no purpose. 
+* Using this version requires linux containers (apt-get lxc)
+* Previous database schema is not compatible with this version. Better start from scratch. 
+* Web history part creates images with Firefox 32 caches BUT is not yet able to manage cache timeline, counters etc.
+
 ## Version upgrade note
 
 ForGe 2.0 includes changes to database scheme. It is advisable to drop the current database and follow installation instructions in Doc/Installation.txt to create a new database schema and populate it with initial data. 
@@ -38,6 +45,7 @@ The application is built in Python and a helper application "chelper" in C. ForG
 * Django 1.5.1 or newer. Should work on Django 1.7
 * Python 2.7.3 -      Currently does not support Python 3
 * Tuxera NTFS-3G 2013.1.13 or newer (the default in Ubuntu 12.04 is an older version, which does weird things to attributes of deleted files)
+* Linux containers
 
 Other Linux versions than Ubuntu are likely to work. The key element is the existence of loopback devices /dev/loopX, as they are used to mount images in process.
 
