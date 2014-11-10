@@ -1,5 +1,5 @@
 '''
-Copyright 2013 Hannu Visti
+Copyright 2013-2014 Hannu Visti
 
 This file is part of ForGe forensic test image generator.
 ForGe is distributed in the hope that it will be useful,
@@ -14,9 +14,13 @@ along with ForGe.  If not, see <http://www.gnu.org/licenses/>.
 from subprocess import call
 import sys
 
+PREFIX = "@@PREFIX@@"
+MOUNTPOINT = "@@MOUNTPOINT@@"
 HELPER = "@@CHELPER@@"
 
-
+WDEST = "/var/lib/lxc/forge-lxc/rootfs/tmp/wh.py"
+ROOTDIR = "/var/lib/lxc/forge-lxc/rootfs"
+WSRC = "/usr/local/forge/creator/browserhistory/webhistory.py"
 
 def errlog(message):
     print >>sys.stderr, message
@@ -26,3 +30,12 @@ class ForensicError(Exception):
         self.value = value
     def __str__(self):
         return repr(self.value)
+
+class Chelper(object):
+    def __init__(self):
+        self.binary = HELPER
+        self.wdest = WDEST
+        self.wsrc = WSRC
+        self.prefix = PREFIX
+        self.mountpoint = MOUNTPOINT
+        self.rootdir = ROOTDIR

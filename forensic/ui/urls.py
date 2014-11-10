@@ -30,11 +30,8 @@ urlpatterns = patterns('',
     url(r'^postsecretfile$', views.post_secret_view, name='post'),
     url(r'^images/(?P<iid>\d+)/$', views.imageView, name='image'),
     url(r'^images$', views.imageView, name='image'),  
+    url(r'^webhistory/(?P<iid>\d+)/$', views.webhistoryView, name='webhistory'),
+    url(r'^webhistory$', views.webhistoryView, name='webhistory'),  
     url(r'^solution$', views.solutionView, name='solution'),
     url(r'^solution/(?P<iid>\d+)/$', views.solutionView, name='solution'),
-     
-    
-    #url(r'^(?P<pk>\d+)/$', views.DetailView.as_view(), name='detail'),
-    #url(r'^(?P<pk>\d+)/results/$', views.ResultsView.as_view(), name='results'),
-    #url(r'^(?P<poll_id>\d+)/vote/$', views.vote, name='vote'),
 )

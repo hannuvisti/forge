@@ -739,6 +739,11 @@ main (int argc, char **argv) {
     exit(1);
   }
 
+  if (strcmp(argv[1], "lxc") == 0) {
+    exit(process_lxc(argc, argv));
+  }
+
+
   if (strcmp(argv[1], "create") == 0) {
     if (argc < 2) {
       fprintf(stderr,"Usage: %s create ntfs|FAT16 ...\n", PNAME);

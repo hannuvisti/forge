@@ -6,6 +6,7 @@ import datetime
 
 from subprocess import call
 from ui.uitools import ForensicError
+from ui.uitools import Chelper
 from ntfsparser.ntfsc import FileEntry
 
 def _Split_String(s):
@@ -40,7 +41,6 @@ def _hexdump(data,highlight=-1,endlight=-1):
     print "--"
 
 
-HELPER = "@@CHELPER@@"
 FLAG_HIDDEN = 0x2
 FLAG_SYSTEM = 0x4
 FLAG_DIR = 0x16
@@ -61,7 +61,7 @@ def FAT16CreateImage(name,size,clustersize,garbage,parameters={}):
     else:
         fill = "clean"
 
-    result = call([HELPER,"create","FAT16",str(size),str(clustersize),str(512), imagename,fill,name], shell=False)
+    result = call([Chelper().binary,"create","FAT16",str(size),str(clustersize),str(512), imagename,fill,name], shell=False)
     return result
 
 def FAT12CreateImage(name,size,clustersize,garbage,parameters={}):
@@ -76,7 +76,7 @@ def FAT12CreateImage(name,size,clustersize,garbage,parameters={}):
     else:
         fill = "clean"
 
-    result = call([HELPER,"create","FAT12",str(size),str(clustersize),str(512), imagename,fill,name], shell=False)
+    result = call([Chelper().binary,"create","FAT12",str(size),str(clustersize),str(512), imagename,fill,name], shell=False)
     return result
 
 def FAT32CreateImage(name,size,clustersize,garbage,parameters={}):
@@ -91,7 +91,7 @@ def FAT32CreateImage(name,size,clustersize,garbage,parameters={}):
     else:
         fill = "clean"
 
-    result = call([HELPER,"create","FAT32",str(size),str(clustersize),str(512), imagename,fill,name], shell=False)
+    result = call([Chelper().binary,"create","FAT32",str(size),str(clustersize),str(512), imagename,fill,name], shell=False)
     return result
 
 def FATGenericCreateImage(name,size,clustersize,garbage,parameters={}):
@@ -106,7 +106,7 @@ def FATGenericCreateImage(name,size,clustersize,garbage,parameters={}):
     else:
         fill = "clean"
 
-    result = call([HELPER,"create","GENERICFAT",str(size),str(clustersize),str(512), imagename,fill,name], shell=False)
+    result = call([Chelper().binary,"create","GENERICFAT",str(size),str(clustersize),str(512), imagename,fill,name], shell=False)
     return result
 
 
@@ -470,6 +470,7 @@ class FATC(FileSystemC):
         #self.fs_fstype = ""
         self.f_mounted = False
         self.f_filelist = []
+        self.helper = Chelper()
         """ first set fs_fstype variable 
 
         try:
@@ -673,12 +674,12 @@ class FATC(FileSystemC):
                 s[2] = used
 
     def mount_image(self):
-        result = call([HELPER, "attach", self.fs_fstype, self.fs_shortname], shell=False)
+        result = call([self.helper.binary, "attach", self.fs_fstype, self.fs_shortname], shell=False)
         if result == 0:
             self.f_mounted = True
         return result
     def dismount_image(self):
-        result = call([HELPER, "detach"], shell=False)
+        result = call([self.helper.binary, "detach"], shell=False)
         if result == 0:
             self.f_mounted = False
         return result

@@ -7,16 +7,44 @@
 #define MKFS_FAT "/sbin/mkfs.msdos"
 #define MOUNT_FAT "/bin/mount"
 
+#define LXC_CREATE "/usr/bin/lxc-create"
+#define LXC_DESTROY "/usr/bin/lxc-destroy"
+#define LXC_STOP "/usr/bin/lxc-stop"
+#define LXC_START "/usr/bin/lxc-start"
+#define LXC_ATTACH "/usr/bin/lxc-attach"
+#define PYTHON "/usr/bin/python"
 
 /* Path for ready images */
 #define PATH "@@IMAGEDIR@@/"
+/* #define PATH "/usr/local/forge/images/" */
 
 /* Path where images in process are temporarily mounted */
 #define MOUNTPOINT "@@MOUNTPOINT@@"
+/* #define MOUNTPOINT "/tmp/image" */
+
+/* This points to webdriver.py inside the container */
+#define WEBDRIVER_REMOTE "/var/lib/lxc/forge-lxc/rootfs/usr/local/lib/python2.7/dist-packages/selenium/webdriver/firefox/webdriver.py"
+#define WEBDRIVER_LOCAL_DIR "/usr/local/lib/python2.7/dist-packages/selenium/webdriver/firefox"
+#define WEBDRIVER_PYC "/usr/local/lib/python2.7/dist-packages/selenium/webdriver/firefox/webdriver.pyc"
+
+/* This is the tmp file in the container */
+#define CONTAINER_TMP "/var/lib/lxc/forge-lxc/rootfs/tmp/wh.py"
+
 
 #define MAX_PATH_LENGTH 256
 
 #define C_RANDOM 1
 #define C_ZERO 0
 
+#define LXC_NAME "forge-lxc"
+#define LXC_USER "forge"
 
+int check_existence(char*, int);
+int process_lxc(int, char**);
+int lxc_create(void);
+int lxc_destroy(int);
+int lxc_stop(void);
+int lxc_attach(int,char**);
+int process_webdriver(void);
+int copy_file(char*);
+int copy_result(char*, char*);

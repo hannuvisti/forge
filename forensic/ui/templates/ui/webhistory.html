@@ -1,0 +1,41 @@
+<!-- Copyright 2013-2014 Hannu Visti 
+
+This file is part of ForGe forensic test image generator.
+ForGe is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with ForGe.  If not, see http://www.gnu.org/licenses/. -->
+
+
+{% extends "ui/main.html" %}
+
+	{% block sidecontainer %}
+		
+		<form method="post" >
+		{% csrf_token %}
+		<select name="click2" size=29 onChange="this.form.submit()"; style="width:200px;overflow-x: auto;background-color:#FFD700;">
+			{% if active_cases %}
+			    {% for case in active_cases %}
+			        <option value="{{ case.pk }}">{{ case.name }}
+			        	
+			    {% endfor %}
+		        
+	   		{% endif %}
+	   	</select>
+	   	</form>
+	
+	{% endblock %}
+
+
+	{% block maincontainer %}
+
+		<form  method="post">
+			{% csrf_token %}
+			Choose a case
+			{{ form.as_p }}
+			<input type="submit" name = "create" value="Create" />
+		</form>
+	{% endblock %}
