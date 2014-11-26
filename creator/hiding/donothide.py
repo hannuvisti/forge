@@ -87,5 +87,5 @@ class DoNotHideFile(HidingMethod):
             raise ForensicError("Unable to write")
         finally:
             self.fs.dismount_image()
-        return dict(instruction=hf,path=internalpath)
         
+        return dict(instruction=hf,path=internalpath,newfile=True)

@@ -1,5 +1,5 @@
 '''
-Copyright 2013-2014 Hannu Visti
+Copyright 2013 Hannu Visti
 
 This file is part of ForGe forensic test image generator.
 ForGe is distributed in the hope that it will be useful,
@@ -19,11 +19,18 @@ import random
 import shutil
 import uitools
 from uitools import ForensicError
-from uitools import Chelper
-from subprocess import call
 import datetime
 import importlib
 
+
+#from django.core.validators import MinValueValidator, MaxValueValidator
+
+#PREFIX = "/usr/local/forge/Images"
+#MOUNTPOINT = "/mnt/image"
+PREFIX = "/usr/local/forge/Images"
+MOUNTPOINT = "/mnt/image"
+
+# Create your models here.
 class User(models.Model):
     ROLES = ((0,"Administrator"), (1,"Teacher"), (2,"Student"), (3,"Tester"))
     name = models.CharField(max_length=64, unique=True)
@@ -66,7 +73,6 @@ class HidingMethod(models.Model):
     priority = models.IntegerField(default=0)
     pythonpath = models.CharField(max_length=256, blank=True)
     pythonhideclass = models.CharField(max_length=256, blank=True)
-
     def __unicode__(self):
         return self.name
     def get_hide_class(self):
@@ -78,24 +84,7 @@ class HidingMethod(models.Model):
             self._hide_class_name = getattr(h, self.pythonhideclass)
             func = self._hide_class_name
         return func
-
-class WebMethod(models.Model):
-    name = models.CharField(max_length=32, unique=True)
-    priority = models.IntegerField(default=0)
-    pythonpath = models.CharField(max_length=256, blank=True)
-    pythonhideclass = models.CharField(max_length=256, blank=True)
-    def __unicode__(self):
-        return self.name
-
-    def get_hide_class(self):
-        try:
-            func = self._hide_class_name
-        except AttributeError:
-            h = importlib.import_module(self.pythonpath)
-            
-            self._hide_class_name = getattr(h, self.pythonhideclass)
-            func = self._hide_class_name
-        return func
+  
 
 class TrivialFileItem(models.Model):
     TYPES = ((0,"Image"), (1,"Document"), (2,"Email"), (3,"Web"), (4,"Audio"), (5, "Video"), 
@@ -113,102 +102,6 @@ class SecretFileItem(models.Model):
     def __unicode__(self):
         return self.name
 
-class Webhistory(models.Model):
-    name = models.CharField(max_length = 256, unique=True)
-    date_created = models.DateField('date created')
-    exact = models.BooleanField(default=True)
-    method = models.ForeignKey(WebMethod)
-    ntocreate = models.IntegerField("n",default=1)
-    def __unicode__(self):
-        return self.name
-
-    def getLongFilename(self,fname):        
-        return Chelper().prefix+"/"+fname
-
-    def processWebhistory(self):
-        try:
-            self.filesystem = FileSystem.objects.filter(name="NTFS")[0]
-        except:
-            raise ForensicError("no NTFS")
-
-        t_urls = self.url_set.filter(group = 0)
-        s_urls = self.url_set.exclude(group = 0)
-        t_searches = self.searchengine_set.filter(group=0)
-        s_searches = self.searchengine_set.exclude(group=0)
-        command = self.filesystem.get_create_function()
-        fsclass = self.filesystem.get_class()
-        mountpoint = Chelper().mountpoint
-        prefix = Chelper().prefix
-
-
-        uclass = self.method.get_hide_class()
-        webm = uclass(self.filesystem)
-
-        rdict = webm.hide_url(trivial_urls=t_urls,secret_urls=s_urls,
-                              amount=self.ntocreate,
-                              secret_searches=s_searches, trivial_searches=t_searches)
-        if rdict["status"] == 2:
-            raise ForensicError(rdict["message"])
-
-        i=0
-        failed_list=[]
-        for r in rdict["results"]:
-            i += 1
-            if r["status"] != "OK":
-                continue
-
-            iname=self.name+"-"+str(i)
-            fcr =  command(size=r["size"], garbage=False,
-                           clustersize=8, 
-                           name=iname)
-            if fcr != 0:
-                uitools.errlog( "something may be wrong, image not created")
-                failed_list.append([i,"Unable to create image file"])
-                continue
-            mount_file = self.getLongFilename(iname)
-            fsystem = fsclass(mount_file, mountpoint)
-            fsystem.fs_init()
-            if fsystem.mount_image() != 0:
-                failed_list.append([i,"Cannot mount image file"])
-                uitools.errlog("--- Cannot mount file, image not processed")
-                os.remove(mount_file)
-                continue
-            try:
-                cdir=os.getcwd()
-                os.chdir(mountpoint)
-            except:
-                fsystem.dismount_image()
-                os.remove(mount_file)
-                failed_list.append([i, "unable to change directory"])
-                continue
-            cres = call(["/bin/tar", "xf", r["fname"]], shell=False)
-            if cres != 0:
-                uitools.errlog("Unable to untar %s" % r["fname"])
-                fsystem.dismount_image()
-                os.remove(mount_file)
-                failed_list.append([i, "unable to untar"])
-                continue
-            os.chdir(cdir)
-            fsystem.dismount_image()
-
-class Url(models.Model):
-    case = models.ForeignKey(Webhistory)
-    url = models.CharField(max_length = 1024)
-    num_clicks = models.IntegerField(default=1)
-    click_depth = models.IntegerField(default=1)
-    date_clicked = models.DateField('date clicked')
-    group = models.IntegerField(default=0)
-
-class SearchEngine(models.Model):
-    case = models.ForeignKey(Webhistory)
-    ENGINES=((0,"Google"), (1,"Yahoo"),(2,"Bing"))
-    engine = models.IntegerField(choices=ENGINES, default=0)
-    search_string = models.CharField(max_length = 256)
-    date_clicked = models.DateField('date clicked')
-    group = models.IntegerField(default=0)
-    click_result = models.IntegerField(default=0)
-    click_depth = models.IntegerField(default=1)
-
 class Case(models.Model):
     name = models.CharField(max_length = 256, unique=True)
     owner = models.ForeignKey(User)
@@ -224,7 +117,6 @@ class Case(models.Model):
     fsparam3 = models.IntegerField(blank=True, default=0)
     fsparam4 = models.IntegerField(blank=True, default=0)
     fsparam5 = models.IntegerField(blank=True, default=0)
-
     def __unicode__(self):
         return self.name
     
@@ -234,9 +126,7 @@ class Case(models.Model):
         secret_strategies = self.secretstrategy_set.all()
         command = self.filesystem.get_create_function()
         fsclass = self.filesystem.get_class()
-        mountpoint = Chelper().mountpoint
-        prefix = Chelper().prefix
-
+        
         if command == None:
             uitools.errlog("no FS create command")
             return None
@@ -253,9 +143,8 @@ class Case(models.Model):
                 continue
             filename = self.name+"-"+str(i)
             
-            result =  command(size=self.size, garbage=self.garbage, 
-                              clustersize=self.fsparam1, 
-                              name=filename)
+            result =  command(size=self.size, garbage=self.garbage, clustersize=self.fsparam1, 
+                                  name=filename)
             if result != 0:
                 uitools.errlog( "something may be wrong, image not created")
                 failed_list.append([i,"Unable to create image file"])
@@ -263,7 +152,7 @@ class Case(models.Model):
             image = Image(filename=filename, seqno = i, case = self)
             image.save()
             mount_file = image.getLongFilename()
-            fsystem = fsclass(mount_file, mountpoint)
+            fsystem = fsclass(mount_file, MOUNTPOINT)
             fsystem.fs_init()
             if fsystem.mount_image() != 0:
                 failed_list.append([i,"Cannot mount image file"])
@@ -341,7 +230,7 @@ class Case(models.Model):
                 os.remove(mount_file)
                 continue
             try:
-                dfile = open(mountpoint+"/info.txt","w")
+                dfile = open(MOUNTPOINT+"/info.txt","w")
                 dfile.write("Created by Forensic test image generator")
                 dfile.write("Case %s, image %d" % (self.name,i))
                 dfile.close()
@@ -374,7 +263,7 @@ class Case(models.Model):
             """ read FS structures once more from scratch """
             del fsystem           
 
-            fsystem = fsclass(mount_file, mountpoint)
+            fsystem = fsclass(mount_file, MOUNTPOINT)
             fsystem.fs_init()
             flag = False
             """ Implement time """
@@ -393,7 +282,7 @@ class Case(models.Model):
                 continue
             
             del fsystem
-            fsystem = fsclass(mount_file,mountpoint)
+            fsystem = fsclass(mount_file,MOUNTPOINT)
             fsystem.fs_init()
             """ implement actions """
             flag = False
@@ -470,16 +359,13 @@ class Image(models.Model):
     case = models.ForeignKey(Case)
     filename = models.CharField(max_length=256, blank=True)
     weekvariance = models.IntegerField(blank=True, default=0)
-
     def __unicode__(self):
         return self.filename
     
     def getLongFilename(self):        
-        return Chelper().prefix+"/"+self.filename
+        return PREFIX+"/"+self.filename
     
     def implement_trivial_strategy(self, strategy, dirtime):
-        mountpoint = Chelper().mountpoint
-
         initialdelta = datetime.timedelta(seconds=random.randint(5,360))
         ''' Time difference of directory files will be randomly 0-3 seconds ''' 
         filedelta = datetime.timedelta(seconds=random.randint(0,3))
@@ -497,7 +383,7 @@ class Image(models.Model):
         except ValueError:
             files = file_candidates
         
-        strategypath = mountpoint+strategy.path
+        strategypath = MOUNTPOINT+strategy.path
         try:
             if not os.path.exists(strategypath):
                 os.makedirs(strategypath)
@@ -559,14 +445,22 @@ class Image(models.Model):
             
         retv = None
         try:
-            result = ssclass.hide_file(hfile.file, self, strategy.process_parameters())
+            result = ssclass.hide_file(hfile.file, self, 
+                                       strategy.process_parameters())
             if result:
-                ho = HiddenObject(image=self,file=hfile,method=hiding_method, location=result["instruction"])
+                ho = HiddenObject(image=self,file=hfile,method=hiding_method, 
+                                  location=result["instruction"])
                 ho.save()
                 retv = {}
                 try:
                     trivial_file_path = result["path"]
-                    self.mark_trivial_file_used(trivial_file_path)
+                    try:
+                        if result["newfile"] == True:
+                            pass
+                        else:
+                            self.mark_trivial_file_used(trivial_file_path)
+                    except KeyError:
+                        self.mark_trivial_file_used(trivial_file_path)
                 except KeyError:
                     pass
                     
@@ -579,7 +473,6 @@ class Image(models.Model):
                         retv["timeline"] = [[result["path"],strategy.filetime+timevariance]]
                         ho.filetime = strategy.filetime + timevariance
                         ho.save()
-                        #retv.append([result["path"],strategy.filetime])
                     except KeyError:
                         pass
                 if strategy.actiontime and strategy.action:
@@ -601,10 +494,8 @@ class Image(models.Model):
                     
         except ForensicError as fe:
             uitools.errlog(fe)
-            #ho.delete()
             raise
         return retv
-        #    uitools.errlog("Not hidden, no candidate files")
             
     def find_trivial_files_by_ext(self, extensions):
         trivial_objects = TrivialObject.objects.filter(image = self)
