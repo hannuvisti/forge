@@ -566,8 +566,14 @@ class Image(models.Model):
                 retv = {}
                 try:
                     trivial_file_path = result["path"]
-                    self.mark_trivial_file_used(trivial_file_path)
-                except KeyError:
+                    try:
+                        if result["newfile"] == True:
+                            pass
+                        else:
+                            self.mark_trivial_file_used(trivial_file_path)
+                    except KeyError:
+                        self.mark_trivial_file_used(trivial_file_path)
+                  except KeyError:
                     pass
                     
                 try:
