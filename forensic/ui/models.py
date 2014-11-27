@@ -573,7 +573,7 @@ class Image(models.Model):
                             self.mark_trivial_file_used(trivial_file_path)
                     except KeyError:
                         self.mark_trivial_file_used(trivial_file_path)
-                  except KeyError:
+                except KeyError:
                     pass
                     
                 try:

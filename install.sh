@@ -100,15 +100,6 @@ echo "process uitools.py"
 cat $APPDIR/forensic/ui/uitools.py_ | sed s#@@CHELPER@@#$CHELPER# | sed s#@@MOUNTPOINT@@#$MOUNTDIR# | sed s#@@PREFIX@@#$IMAGEDIR# > $APPDIR/forensic/ui/uitools.py
 rm $APPDIR/forensic/ui/uitools.py_
 
-echo "process models.py"
-cat $APPDIR/forensic/ui/models.py_ | sed s#@@IMAGEDIR@@#$IMAGEDIR# | sed s#@@MOUNTPOINT@@#$MOUNTDIR# > $APPDIR/forensic/ui/models.py
-rm $APPDIR/forensic/ui/models.py_
-
-echo "process fat.py"
-cat $APPDIR/creator/fat/fat.py_ | sed s#@@CHELPER@@#$CHELPER# > $APPDIR/creator/fat/fat.py
-rm $APPDIR/creator/fat/fat.py_
-
-
 echo "creating chelper"
 cat $CHELPERDIR/chelper.h_ | sed s#@@IMAGEDIR@@#$IMAGEDIR# | sed s#@@MOUNTPOINT@@#$MOUNTDIR# > $CHELPERDIR/chelper.h
 cd $CHELPERDIR
