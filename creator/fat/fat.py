@@ -414,6 +414,8 @@ class FatTable(object):
     def get_cluster_value(self,cluster):
         start_byte = self.bytes*cluster
         start_char = int(start_byte/8)
+        #print cluster,start_byte, start_char, len(self.rawdata),self.bytes
+        #_hexdump(self.rawdata)
         if self.bytes == 16:
             return struct.unpack("<H",self.rawdata[start_char:start_char+2])[0]
         if self.bytes == 32:
@@ -693,6 +695,9 @@ class FATC(FileSystemC):
         return result
 
     def find_file_by_path(self,path):
+        if len(path) > 2:
+            if path[:2] == "//":
+                path = path[1:]
         for f in self.f_entrylist:
             s = f.get_file_name()
             if s == path:

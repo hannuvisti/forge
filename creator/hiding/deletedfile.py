@@ -26,7 +26,7 @@ FLAG_DIRECTORY = 0x2
 FLAG_REGULAR = 0x4
 
 
-""" Params taken: none """
+""" Params taken: directory:/dir """
 
 class DeletedFile(HidingMethod):
     def __init__(self,filesystem):
@@ -40,20 +40,24 @@ class DeletedFile(HidingMethod):
         dirs1 = self.fs.get_list_of_files(FLAG_DIRECTORY|FLAG_REGULAR)
         dirs2 = self.fs.get_list_of_files(FLAG_DIRECTORY|FLAG_SYSTEM)
         dirs = dirs1+[dirs2[0]]
-
         try:
-            dpr = choice(dirs)
-            if dpr.filename != "/.":
-                targetdir=dpr.filename
-            else: 
-                targetdir=""
-                
-            internalpath = targetdir+"/"+os.path.basename(hfile.name)
+            givendir = param["directory"]
+            internalpath = givendir+"/"+os.path.basename(hfile.name)
             targetfile = self.fs.fs_mountpoint + internalpath
             hf = internalpath
+        except KeyError:
+            try:
+                dpr = choice(dirs)
+                if dpr.filename != "/.":
+                    targetdir=dpr.filename
+                else: 
+                    targetdir=""
+                internalpath = targetdir+"/"+os.path.basename(hfile.name)
+                targetfile = self.fs.fs_mountpoint + internalpath
+                hf = internalpath
             
-        except IndexError:
-            raise ForensicError("No directory for hiding")
+            except IndexError:
+                raise ForensicError("No directory for hiding")
 
         try:
             if self.fs.mount_image() != 0:
