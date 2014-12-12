@@ -144,7 +144,7 @@ def initDbView(request):
                                      dirtime = datetime.datetime(2010,12,24,17,0,0))
         c.trivialstrategy_set.create(type=1, quantity=2, exact = True, path="/doc",
                                      dirtime = datetime.datetime(2011,2,28,9,30,15))
-        c.secretstrategy_set.create(method=h, group = 1, filetime = datetime.datetime(2008,5,25,10,42,32))
+        c.secretstrategy_set.create(method=h, group = 1, filetime = datetime.datetime(2008,5,25,10,42,32), amount=1, placeall=False)
         c.save()
         
     return HttpResponse("ok")

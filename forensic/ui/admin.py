@@ -57,7 +57,7 @@ class WebMethodAdmin(admin.ModelAdmin):
 class CaseAdmin(admin.ModelAdmin):
     
     #inlines = [UserInline]
-    list_display = ('name', 'owner', 'date_created', 'amount','filesystem', 'roottime', 'weekvariance')
+    list_display = ('name', 'owner', 'date_created', 'amount','sweep', 'filesystem', 'roottime', 'weekvariance')
     list_filter = ['date_created']
     search_fields = ['name']
     date_hierarchy = 'date_created'
@@ -95,7 +95,7 @@ class TrivialObjectAdmin(admin.ModelAdmin):
     list_display=("image", "file", "inuse", "path")
     
 class SecretStrategyAdmin(admin.ModelAdmin):
-    list_display = ("case", "method", "group", "filetime", "action", "actiontime", "instruction")
+    list_display = ("caseref", "method", "group", "amount", "placeall", "filetime", "action", "actiontime", "instruction")
     
 class HiddenObjectAdmin(admin.ModelAdmin):
     list_display = ("image", "file", "method", "filetime", "action", "actiontime", "location")

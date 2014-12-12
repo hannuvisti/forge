@@ -215,7 +215,8 @@ class Case(models.Model):
     date_created = models.DateField('date created')
     filesystem = models.ForeignKey(FileSystem)
     size = models.CharField(max_length = 20)
-    amount = models.PositiveIntegerField(verbose_name="Number of copies")
+    amount = models.PositiveIntegerField(verbose_name="Number of copies", blank=True, null=True)
+    sweep = models.ForeignKey('SecretStrategy',blank=True, null=True)
     roottime = models.DateTimeField()
     weekvariance = models.IntegerField(default=0)
     garbage = models.BooleanField(default=False)
@@ -227,7 +228,30 @@ class Case(models.Model):
 
     def __unicode__(self):
         return self.name
-    
+
+    def number_of_images(self):
+        if self.sweep == None and self.amount == None:
+            raise ForensicError("You must set either sweep or copies")
+        if self.sweep != None:
+            sweep = 1
+        else:
+            sweep = 0
+        if self.amount != None:
+            amount = self.amount
+        else:
+            amount = 0
+
+        if (sweep == 0 and amount == 0) or (sweep != 0 and amount != 0):
+            uitools.errlog("You must set either sweep or copies")
+            return -1
+
+        sstrat=[]
+        if sweep > 0:
+            fgroup = self.sweep.group
+            sfiles = SecretFileItem.objects.filter(group=fgroup)
+
+        return len(sfiles) if sweep > 0 else amount
+
     def processCase(self):
 
         trivial_strategies = self.trivialstrategy_set.all()
@@ -236,6 +260,10 @@ class Case(models.Model):
         fsclass = self.filesystem.get_class()
         mountpoint = Chelper().mountpoint
         prefix = Chelper().prefix
+
+        tobecreated = self.number_of_images()
+        if tobecreated == -1:
+            return None
 
         if command == None:
             uitools.errlog("no FS create command")
@@ -247,7 +275,11 @@ class Case(models.Model):
             del os.chmod
         except AttributeError:
             removed_chmod = None
-        for i in range(1,self.amount+1):
+        if self.sweep != None:
+            secretfiles = SecretFileItem.objects.filter(group=self.sweep.group)
+            secretindex=0
+
+        for i in range(1,tobecreated+1):
             if self.trivialstrategy_set.count() == 0:
                 failed_list.append([i,"No trivial strategies"])
                 continue
@@ -304,11 +336,18 @@ class Case(models.Model):
                 image.implement_secret_strategy(sstrategy, fsystem)"""
             file_delete_list = []
             file_action_list = []    
+
             try:
                 for prio in range (1,21):
                     current_strategies = [t for t in secret_strategies if t.method.priority == prio]
                     for sstrategy in current_strategies:
-                        tv = image.implement_secret_strategy(sstrategy, fsystem, timevariance)
+                        if self.sweep != None:
+                            if sstrategy == self.sweep:
+                                tv = image.implement_secret_strategy(sstrategy, fsystem, timevariance, sfile = secretfiles[secretindex])
+                                secretindex += 1
+                                print secretindex
+                            else:
+                                tv = image.implement_secret_strategy(sstrategy, fsystem, timevariance, sfile = None)
                         if tv:
                             try:
                                 time_command_list = time_command_list + tv["timeline"]
@@ -442,9 +481,11 @@ class TrivialStrategy(models.Model):
     
 class SecretStrategy(models.Model):
     ACTIONS=((0,"None"), (1,"Copy"),(2,"Move"),(3,"Rename"), (4,"Read"), (5,"Edit"))
-    case = models.ForeignKey(Case)    
+    caseref = models.ForeignKey(Case)    
     method = models.ForeignKey(HidingMethod)
     group = models.IntegerField(default=0)
+    amount = models.IntegerField(default=1)
+    placeall = models.BooleanField(default=False)
     filetime = models.DateTimeField (blank=True, null=True)
     actiontime = models.DateTimeField(blank=True, null=True)
     action = models.IntegerField(choices=ACTIONS,blank=True, null=True)
@@ -462,7 +503,7 @@ class SecretStrategy(models.Model):
         return param
         
     def __unicode__(self):
-        return self.case.name+self.method.name
+        return self.method.name+":"+str(self.group)
     
     
 class Image(models.Model):
@@ -522,7 +563,7 @@ class Image(models.Model):
                 raise ForensicError("IO error / out of space")        
         return time_command_list
     
-    def implement_secret_strategy(self,strategy, filesystem,timevariance):
+    def implement_secret_strategy(self,strategy, filesystem,timevariance, sfile=None):
         """ this is a kludge to initialise a class variable without __init__ """
         try:
             if self._used_items[0] == None:
@@ -534,28 +575,32 @@ class Image(models.Model):
         #uitools.errlog(hiding_method.name)
         hcmodel = hiding_method.get_hide_class()
         ssclass = hcmodel(filesystem)
-        
-        try:
-            file_candidates = SecretFileItem.objects.filter(group = strategy.group)
-            i = 0
-            """ first try to find a random file. Fall back to sequential if 20 tries fail """
-            while i < 20:
-                hfile = random.choice(file_candidates)
-                if not hfile in self._used_items:
-                    self._used_items.append(hfile)
-                    break
-                i += 1
-            if i == 20:
-                """ find something if nothing found """
-                possibilities = list(set(file_candidates) - set(self._used_items))
-                if possibilities == []:
-                    raise ForensicError("no files left to be hidden")
-                else:
-                    hfile = possibilities[0]
-                    self._used_items.append(hfile)
+
+        if not sfile:
+            try:
+                file_candidates = SecretFileItem.objects.filter(group = strategy.group)
+                i = 0
+                """ first try to find a random file. Fall back to sequential if 20 tries fail """
+                while i < 20:
+                    hfile = random.choice(file_candidates)
+                    if not hfile in self._used_items:
+                        self._used_items.append(hfile)
+                        break
+                    i += 1
+                if i == 20:
+                    """ find something if nothing found """
+                    possibilities = list(set(file_candidates) - set(self._used_items))
+                    if possibilities == []:
+                        raise ForensicError("no files left to be hidden")
+                    else:
+                        hfile = possibilities[0]
+                        self._used_items.append(hfile)
                 
-        except (IndexError, NameError):
-            raise ForensicError("No files to be hidden")
+            except (IndexError, NameError):
+                raise ForensicError("No files to be hidden")
+
+        else:
+            hfile = sfile
             
         retv = None
         try:
