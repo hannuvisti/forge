@@ -255,7 +255,8 @@ class Case(models.Model):
     def processCase(self):
 
         trivial_strategies = self.trivialstrategy_set.all()
-        secret_strategies = self.secretstrategy_set.all()
+        secret_strategies_pre = self.secretstrategy_set.all()
+        secret_strategies = secret_strategies_pre
         command = self.filesystem.get_create_function()
         fsclass = self.filesystem.get_class()
         mountpoint = Chelper().mountpoint
@@ -331,9 +332,31 @@ class Case(models.Model):
             """ Initialise NTFS structures at this stage """
             fsystem.dismount_image()
             fsystem.fs_init()
-            """    
-            for sstrategy in secret_strategies:
-                image.implement_secret_strategy(sstrategy, fsystem)"""
+
+            """ 
+            Reserve code for placeall implementation. 
+
+
+            flag = False
+            secret_strategies = []
+            for st in secret_strategies_pre:
+                if st.placeall:
+                    if st == self.sweep:
+                        uitools.errlog("Sweep strategy cannot be a placeall strategy")
+                        failed_list.append([i,"Secret strategy cannot be a placeall strategy"])
+                        os.remove(mount_file)
+                        image.delete()
+                        flag = True
+                        break
+                    pafiles = SecretFileItem.objects.filter(group=st.group)
+                    
+                else:
+                    secret_strategies.append(st)
+            if flag == True:
+                continue """
+
+
+
             file_delete_list = []
             file_action_list = []    
 
@@ -343,11 +366,15 @@ class Case(models.Model):
                     for sstrategy in current_strategies:
                         if self.sweep != None:
                             if sstrategy == self.sweep:
-                                tv = image.implement_secret_strategy(sstrategy, fsystem, timevariance, sfile = secretfiles[secretindex])
+                                tv = image.implement_secret_strategy(sstrategy, fsystem, timevariance, 
+                                                                     sfile = secretfiles[secretindex])
                                 secretindex += 1
-                                print secretindex
                             else:
-                                tv = image.implement_secret_strategy(sstrategy, fsystem, timevariance, sfile = None)
+                                tv = image.implement_secret_strategy(sstrategy, fsystem, timevariance, 
+                                                                     sfile = None)
+                        else:
+                            tv = image.implement_secret_strategy(sstrategy, fsystem, timevariance, 
+                                                                 sfile = None)
                         if tv:
                             try:
                                 time_command_list = time_command_list + tv["timeline"]
