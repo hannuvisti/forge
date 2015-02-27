@@ -262,15 +262,17 @@ class Case(models.Model):
         mountpoint = Chelper().mountpoint
         prefix = Chelper().prefix
 
+        failed_list=[]
+        succeed_list = []
+
         tobecreated = self.number_of_images()
         if tobecreated == -1:
-            return None
+            failed_list.append([0,"You must set either sweep or number of copies but not both"])
+            return [succeed_list,failed_list]
 
         if command == None:
             uitools.errlog("no FS create command")
             return None
-        failed_list=[]
-        succeed_list = []
         try:
             removed_chmod = os.chmod
             del os.chmod

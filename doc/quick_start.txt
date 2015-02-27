@@ -102,6 +102,13 @@ initialising Django database.
    If you want to choose manually, I have been able to create a FAT12 file 
    system with 3M file size, FAT16 with 25M file size and FAT32 with 256M
    file size, with cluster size 4
+   You must define either the number of copies or choose a secret strategy 
+   from the "sweep" pull down menu.  If you use number of copies, exactly
+   that many images will be created. If you use sweep method, one of the 
+   secret strategies is chosen as the sweep source. If for example there is 
+   a secret strategy that uses method "ADS" to secret file group 5, and secret
+   file group 5 has ten secret files, exactly ten images will be created. Each
+   file will have a different group 5 file hidden by ADS method. 
 
 6) Create at least one trivial strategy. This puts the "bulk" on file systems,
    for example /holiday containing pictures and /doc containing documents. 

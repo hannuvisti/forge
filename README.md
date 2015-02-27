@@ -1,18 +1,21 @@
 # ForGe
 
-Forensic test image generator v2.0
-Copyright Hannu Visti 2013-2014, licenced under Gnu General Public Licence
+Forensic test image generator v2.1
+Copyright Hannu Visti 2013-2015, licenced under Gnu General Public Licence
+
+## New functionality
+* Secret strategy sweep. When defining a case, either number of copies or a secret strategy sweep must be chosen. If a secret strategy sweep is chosen, the number of created images depends on the number of secret files associated to the chosen secret strategy. For example, if a secret strategy using ADS is chosen as the sweep target, and the secret strategy uses secret file group 5 and secret file group 5 has ten different secret files, exactly ten images will be created. Each image will have a different file from group 5 hidden by ADS. This allows rapid creation of images for educational purposes, where each student will be given a different secret file hidden with identical method. 
 
 ## Development information
 
-This commit merges "webhistory" branch into master.  Webhistory is by no means a completed project but this version does not cause problems to the main application and developing them independently from this point forward serves no purpose. 
+V2.0 commit merged "webhistory" branch into master.  Webhistory is by no means a completed project but this version does not cause problems to the main application and developing them independently from this point forward serves no purpose. 
 * Using this version requires linux containers (apt-get lxc)
 * Previous database schema is not compatible with this version. Better start from scratch. 
 * Web history part creates images with Firefox 32 caches BUT is not yet able to manage cache timeline, counters etc.
 
 ## Version upgrade note
 
-ForGe 2.0 includes changes to database scheme. It is advisable to drop the current database and follow installation instructions in Doc/Installation.txt to create a new database schema and populate it with initial data. 
+ForGe 2.0 included changes to database scheme. If upgrading from older versions, it is advisable to drop the current database and follow installation instructions in Doc/Installation.txt to create a new database schema and populate it with initial data. 
 
 Changes: 
 * TrivialObject table now has a boolean field inuse to flag a trivial file on image already used as a cover file.
