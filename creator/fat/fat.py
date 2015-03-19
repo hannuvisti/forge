@@ -8,6 +8,8 @@ from subprocess import call
 from ui.uitools import ForensicError
 from ui.uitools import Chelper
 from ntfsparser.ntfsc import FileEntry
+from random import randint
+
 
 def _Split_String(s):
     __i=0
@@ -434,7 +436,7 @@ class FatTable(object):
             fatvalue = hi | lo
             return fatvalue
                 
-        return "foo"
+        return -1
 
     def get_cluster_chain(self,cl=0):
         eoc = 2**self.bytes-1
@@ -450,6 +452,51 @@ class FatTable(object):
                 return result
             result.append(s)
             t = s
+
+    def init_fat(self, clusters):
+        self.ftb = []
+        self.maxclus = clusters-1
+        ctmp = 0
+        for ctmp in range (0,clusters):
+            cv = self.get_cluster_value(ctmp)
+            if cv == -1:
+                print ctmp
+                raise ForensicError("Cluster out of bounds")
+            else:
+                self.ftb.append(cv)
+        pass
+
+    """
+    This method finds n consecutive empty clusters. Then marks them
+    temporarily as used """
+
+    def find_consecutive_empty(self, n):
+        c = 0
+        # Random attempt
+        while c < 20:
+            y = randint(20, self.maxclus-n)
+            expected = True
+            for w in range(y,y+n):
+                if self.ftb[w] != 0:
+                    expected = False
+            if expected == True:
+                for w in range (y,y+n):
+                    self.ftb[w] = -1
+                return w
+            c += 1
+        #Sequential attempt
+        for y in range(20, self.maxclus-n):
+            expected = True
+            for w in range(y,y+n):
+                if self.ftb[w] != 0:
+                    expected = False
+            if expected == True:
+                for w in range (y,y+n):
+                    self.ftb[w] = -1
+                return w
+        #Sequential attempt fails
+        return -1
+
 
 class FileSystemC(object):
     def __init__(self, fname, mountpoint="/mnt/image"):
@@ -513,6 +560,7 @@ class FATC(FileSystemC):
         self.f_slack = []
         self.f_filelist = []
         self.f_entrylist = []
+        self.f_numofclusters = self.f_numofsectors / struct.unpack("B", vbr[13])[0]
         fstype_string, = struct.unpack("5s",vbr[54:59])
         if fstype_string == "FAT12":
             self.fs_fstype = "FAT12"
@@ -569,7 +617,7 @@ class FATC(FileSystemC):
         self.fs_fh.seek(self.f_sectorsize*self.f_reserved)
         buf = self.fs_fh.read(self.f_fatsize*self.f_sectorsize)
         self.f_fat = FatTable(buf,512,self)
-
+        self.f_fat.init_fat(self.f_numofclusters)
         
         self.fs_fh.seek(self.f_sectorsize*self.f_rootstart)
         if self.fs_fstype == "FAT12" or self.fs_fstype == "FAT16":
@@ -705,6 +753,16 @@ class FATC(FileSystemC):
         emessage = "File not found: "+path
         raise ForensicError(emessage)
 
+    def locate_unallocated_space(self, datasize):
+        required = int(datasize / self.f_clustersize) +1
+        q = self.f_fat.find_consecutive_empty(required)
+        if q == -1:
+            raise ForensicError("Not enough unallocated space")
+        return self.locate_cluster(q)
+
+    def set_cluster_status(self,a,b,c):
+        pass
+
     def change_time(self,fname,btime):
         atime=ctime=mtime=None
         try:
@@ -793,28 +851,4 @@ class FATC(FileSystemC):
             pass
 
 
-
-# Foo
-
-#fs = FATC("/usr/local/forge/Images/pup", "/mnt/image")
-#fs.fs_init()
-
-#nt = datetime.datetime (1999,10,11,13,42,42)
-
-#for f in fs.get_list_of_files(4):
-#    if f.filenumber == 90:
-#        f.link.print_entry()
-    
-
-#q = fs.find_file_by_path("/FOO/PUP/Mounting a FAT32 drive in linux DaniWeb_files/widgets.js")
-
-
-   
-#cstruct = {}
-#cstruct["all"] = nt
-#fs.change_time("", cstruct)
-
-
-#for f in fs.f_entrylist:
-#    print f.filenumber, f.get_file_name()
 

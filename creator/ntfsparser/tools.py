@@ -95,34 +95,41 @@ class _NTFSTime:
             return None
         if len(buf) != 32:
             return None
-        """
-        self.a_ctime = _NTFSTime(struct.unpack("<Q", self.a_content.read_data(0,8))[0])       # creation
-        self.a_atime = _NTFSTime(struct.unpack("<Q", self.a_content.read_data(8,16))[0])      # alteration
-        self.a_mtime = _NTFSTime(struct.unpack("<Q", self.a_content.read_data(16,24))[0])     # MFT change
-        self.a_rtime = _NTFSTime(struct.unpack("<Q", self.a_content.read_data(24,32))[0])     # File read time"""
-        
-        """ MACE timestamp extraction
-        NTFS has timestamps in order creation, modification, entry changed, access 
-        """
         
         self.raw_ctime,self.raw_mtime,self.raw_etime,self.raw_atime=struct.unpack("<QQQQ", buf)
         diff = (369*365+89)*24*3600*10000000
+        try:
+            self.ctime_sec = long((self.raw_ctime-diff)/10000000)
+            self.ctime_nsec = ((self.raw_ctime-diff) - self.ctime_sec*10000000)*100
+            self.ctime = datetime.datetime.fromtimestamp(self.ctime_sec)
+        except ValueError:
+            print self.ctime_sec
+            raise
         
-        self.ctime_sec = long((self.raw_ctime-diff)/10000000)
-        self.ctime_nsec = ((self.raw_ctime-diff) -self.ctime_sec*10000000)*100
-        self.ctime = datetime.datetime.fromtimestamp(self.ctime_sec)
-        
-        self.atime_sec = long((self.raw_atime-diff)/10000000)
-        self.atime_nsec = ((self.raw_atime-diff) -self.atime_sec*10000000)*100
-        self.atime = datetime.datetime.fromtimestamp(self.atime_sec)
-                
-        self.mtime_sec = long((self.raw_mtime-diff)/10000000)
-        self.mtime_nsec = ((self.raw_mtime-diff) -self.mtime_sec*10000000)*100
-        self.mtime = datetime.datetime.fromtimestamp(self.mtime_sec)
-                
-        self.etime_sec = long((self.raw_etime-diff)/10000000)
-        self.etime_nsec = ((self.raw_etime-diff) -self.etime_sec*10000000)*100
-        self.etime = datetime.datetime.fromtimestamp(self.etime_sec)
+        try:
+            self.atime_sec = long((self.raw_atime-diff)/10000000)
+            self.atime_nsec = ((self.raw_atime-diff) -self.atime_sec*10000000)*100
+            self.atime = datetime.datetime.fromtimestamp(self.atime_sec)
+        except ValueError:
+            print self.atime_sec
+            raise
+
+        try:
+            self.mtime_sec = long((self.raw_mtime-diff)/10000000)
+            self.mtime_nsec = ((self.raw_mtime-diff) -self.mtime_sec*10000000)*100
+            self.mtime = datetime.datetime.fromtimestamp(self.mtime_sec)
+        except ValueError:
+            print self.mtime_sec
+            raise
+
+        try:
+            self.etime_sec = long((self.raw_etime-diff)/10000000)
+            self.etime_nsec = ((self.raw_etime-diff) -self.etime_sec*10000000)*100
+            self.etime = datetime.datetime.fromtimestamp(self.etime_sec)
+        except ValueError:
+            print self.etime_sec
+            raise
+            
     def raw_time(self):
         buf = struct.pack("<QQQQ",self.raw_ctime,self.raw_mtime,self.raw_etime,self.raw_atime)
         return buf
